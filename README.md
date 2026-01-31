@@ -80,7 +80,13 @@ or connect the github repo directly to vercel.
 youtubeclone/
 ├── index.py
 ├── templates/
+│   ├── home.html
+│   ├── results.html
+│   └── watch.html
 ├── static/
+│   ├── autocomplete.js
+│   ├── infinite-scroll.js
+│   └── style.css
 ├── requirements.txt
 ├── vercel.json
 ├── plan.md
