@@ -1,4 +1,5 @@
 # viewtube
+<img width="800" height="600" alt="ytviks" src="https://github.com/user-attachments/assets/ab2c7e9d-2e31-4837-a4e1-42436e1cfd35" />
 
 a privacy focused youtube frontend built with flask
 
