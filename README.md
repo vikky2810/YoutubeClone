@@ -1,81 +1,131 @@
-# ViewTube - Privacy-Focused YouTube Frontend
+# viewtube
 
-A lightweight, privacy-focused YouTube frontend built with Flask and deployed on Vercel.
+a privacy focused youtube frontend built with flask
 
-## Features
+this project exists because my college sometimes blocks youtube.
 
-- 🔒 **Privacy First** - No tracking, no cookies, no data collection
-- ⚡ **Lightning Fast** - Optimized for Vercel serverless deployment
-- 🎯 **Simple & Clean** - Minimal interface, maximum functionality
+not permanently, but randomly. one day it works, the next day it doesn’t. tutorials stop loading. lectures don’t open. debugging videos are suddenly unreachable. when you rely on youtube to learn tech, that inconsistency is frustrating.
 
-## Tech Stack
+so instead of waiting for the block to be lifted every time, i built my own way to access youtube content.
 
-- **Backend**: Python + Flask
-- **Frontend**: HTML + CSS (Jinja templates)
-- **Video Data**: yt-dlp
-- **Deployment**: Vercel (serverless)
+this is a lightweight youtube frontend built using python and flask, deployed on vercel. it does not use the official youtube ui, it does not track users, and it does not store personal data. it simply fetches video information and streams it in a clean, minimal interface.
 
-## Local Development
+this project is not about breaking rules. it is about solving a real problem i personally faced while learning.
 
-1. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
+---
 
-2. **Run the development server**:
-   ```bash
-   python api/index.py
-   ```
+## what this project does
 
-3. **Open in browser**:
-   ```
-   http://localhost:5000
-   ```
+* lets you search and watch youtube videos
+* streams videos using progressive mp4 playback
+* shows basic metadata and comments
+* keeps the ui simple and distraction free
+* works within vercel free tier limits
 
-## Deployment
+no ads. no tracking. no cookies. no noise.
 
-Deploy to Vercel with one click:
+---
 
-```bash
+## tech stack
+
+* backend: python + flask
+* frontend: html + css using jinja templates
+* video extraction: yt-dlp
+* deployment: vercel (serverless)
+
+the stack is intentionally simple. no docker. no heavy setup. just code that works.
+
+---
+
+## local development
+
+install dependencies:
+
+```
+pip install -r requirements.txt
+```
+
+run the app:
+
+```
+python index.py
+```
+
+open in browser:
+
+```
+http://localhost:5000
+```
+
+---
+
+## deployment
+
+this project is designed for vercel’s serverless environment.
+
+deploy using the cli:
+
+```
 vercel
 ```
 
-Or connect your GitHub repository to Vercel for automatic deployments.
+or connect the github repo directly to vercel.
 
-## Project Structure
+---
+
+## project structure
 
 ```
-YoutubeClone/
-├── api/
-│   └── index.py          # Flask app (Vercel entry point)
+youtubeclone/
+├── index.py
 ├── templates/
-│   ├── home.html         # Home page
-│   ├── results.html      # Search results (coming soon)
-│   └── watch.html        # Video player (coming soon)
 ├── static/
-│   └── style.css         # Styles
-├── requirements.txt      # Python dependencies
-├── vercel.json          # Vercel configuration
-└── README.md            # This file
+├── requirements.txt
+├── vercel.json
+├── plan.md
+├── features.md
+├── fixes.md
+└── readme.md
 ```
 
-## Vercel Constraints
+---
 
-This project is designed to work within Vercel's free tier limits:
+## vercel constraints
 
-- ⏱️ 10-second execution timeout
-- 💾 No persistent filesystem
-- 🚫 No background workers
-- 📦 Limited response size
+this project respects vercel free tier limits:
 
-## Development Roadmap
+* short execution timeout
+* no persistent storage
+* no background workers
+* limited response size
 
-- [x] Feature #1: Home page with search
-- [x] Feature #2: Search results page
-- [x] Feature #3: Video watch page
+architecture choices were made around these limits.
 
-**All core features complete!** 🎉
+---
 
-## License
+## why i built this
 
-MIT License - feel free to use this project for learning and portfolio purposes.
+i built this because youtube being blocked “sometimes” is worse than being blocked forever.
+
+you never know when it will fail, and that breaks learning momentum.
+
+this project helped me learn:
+
+* real flask deployment
+* serverless limitations
+* video streaming basics
+* structuring a real-world project
+* building solutions instead of waiting for permission
+
+---
+
+## license
+
+mit license.
+use it for learning or portfolio projects.
+
+---
+
+## live demo
+
+[https://ytviks.vercel.app/](https://ytviks.vercel.app/)
