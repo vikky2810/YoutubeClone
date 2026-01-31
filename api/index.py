@@ -341,6 +341,10 @@ def format_date(date_str):
     except:
         return "Unknown date"
 
+# Export the app for Vercel
+# This is required for Vercel's serverless function handler
+application = app
+
 # For local development
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
