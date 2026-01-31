@@ -43,9 +43,17 @@
             <section class="video-player-section">
                 <!-- Video Player -->
                 <div class="video-player-wrapper">
+                    {% if video.video_url %}
+                    <video class="video-player" controls autoplay poster="{{ video.thumbnail }}"
+                        style="background-color: black;">
+                        <source src="{{ video.video_url }}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                    {% else %}
                     <iframe src="https://www.youtube-nocookie.com/embed/{{ video.id }}" class="video-player"
                         frameborder="0" webkitallowfullscreen="1" mozallowfullscreen="1" allowfullscreen="1"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+                    {% endif %}
                 </div>
 
                 <!-- Video Info -->
@@ -110,6 +118,45 @@
                         </div>
                     </div>
                     {% endif %}
+
+                    <!-- Comments Section -->
+                    <div class="comments-section">
+                        <div class="comments-header">
+                            <h3 class="comments-title">Comments</h3>
+                        </div>
+
+                        {% if video.comments %}
+                        {% for comment in video.comments %}
+                        <div class="comment-item">
+                            <div class="comment-avatar">
+                                {% if comment.author_thumbnail %}
+                                <img src="{{ comment.author_thumbnail }}" alt="{{ comment.author }}">
+                                {% else %}
+                                {{ comment.author[0] | default('A') }}
+                                {% endif %}
+                            </div>
+                            <div class="comment-content">
+                                <div class="comment-author-header">
+                                    <span class="comment-author">{{ comment.author }}</span>
+                                </div>
+                                <div class="comment-text">{{ comment.text }}</div>
+                                <div class="comment-actions">
+                                    <span class="comment-like">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                            stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                                        </svg>
+                                        {{ comment.like_count }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <p class="no-comments">No comments available.</p>
+                        {% endif %}
+                    </div>
                 </div>
             </section>
 

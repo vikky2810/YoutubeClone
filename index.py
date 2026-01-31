@@ -248,19 +248,22 @@ def watch():
     if not video_id:
         return redirect(url_for('home'))
     
-    # Simply pass the video ID to the template
-    # The iframe will handle the video playback
-    # We'll use basic info without fetching metadata to avoid bot detection
-    video_data = {
-        'id': video_id,
-        'title': 'Video Player',  # Simple title
-        'channel': 'YouTube',
-        'view_count': '',
-        'like_count': '',
-        'upload_date': '',
-        'description': 'Watch this video on ViewTube - a privacy-focused YouTube frontend.',
-    }
-    
+    # Fetch detailed video info including title, description, and comments
+    video_data = get_video_info(video_id)
+
+    if not video_data:
+        # Fallback if fetching fails
+        video_data = {
+            'id': video_id,
+            'title': 'Video Player',
+            'channel': 'YouTube',
+            'view_count': '',
+            'like_count': '',
+            'upload_date': '',
+            'description': 'Watch this video on ViewTube - a privacy-focused YouTube frontend.',
+            'comments': []
+        }
+
     return render_template('watch.html', video=video_data)
 
 
@@ -272,13 +275,15 @@ def get_video_info(video_id):
     print(f"Fetching video info for ID: {video_id}")  # Debug
     try:
         ydl_opts = {
-            'quiet': False,  # Show output for debugging
+            'quiet': False,
             'no_warnings': False,
-            'format': 'best',
+            'format': 'best', # Get best available, we will filter manually
+            'get_comments': True,
+            'extract_flat': False,
         }
         
         url = f"https://www.youtube.com/watch?v={video_id}"
-        print(f"URL: {url}")  # Debug
+        print(f"URL: {url}")
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
@@ -287,7 +292,29 @@ def get_video_info(video_id):
                 print("ERROR: No info returned from yt-dlp")
                 return None
             
-            print(f"Successfully fetched info for: {info.get('title', 'Unknown')}")  # Debug
+            print(f"Successfully fetched info for: {info.get('title', 'Unknown')}")
+            
+            # Find the best progressive video (video + audio)
+            video_url = None
+            formats = info.get('formats', [])
+            
+            # Sort formats by resolution (height) descending to get best quality first
+            # Filter for mp4, video and audio present
+            progressive_formats = [
+                f for f in formats 
+                if f.get('ext') == 'mp4' 
+                and f.get('vcodec') != 'none' 
+                and f.get('acodec') != 'none'
+            ]
+            
+            # Sort by height (quality)
+            progressive_formats.sort(key=lambda x: x.get('height') or 0, reverse=True)
+            
+            if progressive_formats:
+                video_url = progressive_formats[0]['url']
+                print(f"Found progressive MP4 video URL: {progressive_formats[0].get('format_id')}")
+            else:
+                print("No progressive MP4 format found. Falling back to iframe.")
             
             # Extract video data
             video = {
@@ -301,6 +328,8 @@ def get_video_info(video_id):
                 'description': info.get('description', 'No description available'),
                 'thumbnail': info.get('thumbnail', ''),
                 'duration': format_duration(info.get('duration', 0)),
+                'video_url': video_url,
+                'comments': extract_comments(info.get('comments', [])),
             }
             
             return video
@@ -340,6 +369,29 @@ def format_date(date_str):
         return f"{month_name} {int(day)}, {year}"
     except:
         return "Unknown date"
+
+def extract_comments(comments_data):
+    """Extract and format top comments"""
+    if not comments_data:
+        return []
+        
+    formatted_comments = []
+    # Limit to top 20 comments to keep it light
+    for comment in comments_data[:20]:
+        try:
+            formatted_comments.append({
+                'author': comment.get('author', 'Anonymous'),
+                'author_thumbnail': comment.get('author_thumbnail', ''),
+                'text': comment.get('text', ''),
+                'like_count': format_number(comment.get('like_count', 0)),
+                'id': comment.get('id', ''),
+                'timestamp': comment.get('timestamp', 0)
+            })
+        except Exception as e:
+            print(f"Error parsing comment: {e}")
+            continue
+            
+    return formatted_comments
 
 # Export the app for Vercel
 # This is required for Vercel's serverless function handler
