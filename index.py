@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 import yt_dlp
 import re
+import random
 
 app = Flask(__name__)
 
@@ -112,6 +113,46 @@ def search_youtube_with_offset(query, offset=0, max_results=10):
         import traceback
         traceback.print_exc()
         return []
+
+def get_trending_videos(max_results=15):
+    """
+    Get trending videos.
+    Since real trending feed can be tricky with region locks, 
+    we use a mix of popular categories if direct trending fails.
+    """
+    print("Fetching trending videos...")
+    
+    # Try multiple strategies
+    strategies = [
+        "Programming tutorials real project builds",
+        "AI tools and automation software",
+        "Tech career guidance and salary breakdown",
+        "Startup SaaS indie hacker journey",
+        "Productivity deep work systems",
+        "Personal growth and mindset",
+        "System design and backend explainers",
+        "Developer tools IDEs setup",
+        "Freelancing online income for developers",
+        "Interview preparation DSA patterns"
+    ]
+    
+    # Randomly pick a category to keep the home page fresh
+    query = random.choice(strategies)
+    print(f"Trending strategy: search for '{query}'")
+    
+    return search_youtube(query, max_results)
+
+@app.route('/api/trending')
+def trending():
+    """
+    API endpoint to fetch trending videos
+    """
+    try:
+        videos = get_trending_videos(max_results=12)
+        return jsonify(videos)
+    except Exception as e:
+        print(f"Trending API error: {e}")
+        return jsonify([])
 
 @app.route('/api/autocomplete')
 def autocomplete():

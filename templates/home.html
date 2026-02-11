@@ -50,6 +50,14 @@
             </form>
         </section>
 
+        <!-- Trending Section -->
+        <section class="trending-section">
+            <h2 class="section-title">Trending Now</h2>
+            <div id="trending-container" class="video-grid">
+                <!-- Trending videos will be loaded here via JS -->
+            </div>
+        </section>
+
         <!-- Features Section -->
         <section class="features">
             <div class="features-grid">
@@ -93,6 +101,7 @@
 
     <!-- Autocomplete Script -->
     <script src="{{ url_for('static', filename='autocomplete.js') }}"></script>
+    <script src="{{ url_for('static', filename='trending.js') }}"></script>
 </body>
 
 </html>
