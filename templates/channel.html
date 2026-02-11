@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block description %}{{ channel_name }} - ViewTube{% endblock %}
+{% block title %}{{ channel_name }} - ViewTube{% endblock %}
+
+{% block header_search %}
+<!-- Search Bar in Header -->
+<form action="/search" method="get" class="header-search-form">
+    <div class="header-search-container">
+        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+            stroke="currentColor" width="20" height="20">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input type="text" name="q" class="header-search-input" placeholder="Search..." required autocomplete="off">
+        <button type="submit" class="header-search-button">
+            Search
+        </button>
+    </div>
+</form>
+{% endblock %}
+
+{% block main_content %}
+<!-- Channel Header -->
+<div class="channel-page-header">
+    <div class="channel-profile">
+        <div class="channel-avatar-large">
+            {{ channel_name[0]|upper }}
+        </div>
+        <div class="channel-details-large">
+            <h1 class="channel-title-large">{{ channel_name }}</h1>
+            <div class="channel-meta-large">
+                <span>{{ videos|length }} videos</span>
+                <span>•</span>
+                <span>Latest Uploads</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Video Grid -->
+{% if videos %}
+<div class="video-grid">
+    {% for video in videos %}
+    <article class="video-card">
+        <a href="/watch?v={{ video.id }}" class="video-link">
+            <!-- Thumbnail -->
+            <div class="video-thumbnail-wrapper">
+                <img src="{{ video.thumbnail }}" alt="{{ video.title }}" class="video-thumbnail" loading="lazy">
+                <span class="video-duration">{{ video.duration }}</span>
+            </div>
+
+            <!-- Video Info -->
+            <div class="video-info">
+                <h2 class="video-title" title="{{ video.title }}">
+                    {{ video.title }}
+                </h2>
+                <div class="video-meta">
+                    <p class="video-stats">{{ video.view_count }} • {{ video.upload_date }}</p>
+                </div>
+            </div>
+        </a>
+    </article>
+    {% endfor %}
+</div>
+{% else %}
+<!-- No Results -->
+<div class="no-results">
+    <div class="no-results-icon">📺</div>
+    <h2 class="no-results-title">No videos found for this channel</h2>
+    <p class="no-results-text">
+        The channel might not have any public videos or the ID is incorrect.
+    </p>
+    <a href="/" class="back-home-button">
+        ← Back to Home
+    </a>
+</div>
+{% endif %}
+{% endblock %}

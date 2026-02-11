@@ -3,6 +3,8 @@ import yt_dlp
 import re
 import random
 import os
+import urllib.request
+import xml.etree.ElementTree as ET
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-viewtube-secret-key')
@@ -55,6 +57,7 @@ def search_youtube(query, max_results=10):
                         'title': entry.get('title', 'Untitled'),
                         'thumbnail': entry.get('thumbnail', entry.get('thumbnails', [{}])[0].get('url', '')),
                         'channel': entry.get('uploader', entry.get('channel', 'Unknown')),
+                        'channel_id': entry.get('channel_id', entry.get('uploader_id', '')),
                         'duration': format_duration(entry.get('duration', 0)),
                         'view_count': format_views(entry.get('view_count', 0)),
                         'url': f"https://www.youtube.com/watch?v={entry.get('id', '')}"
@@ -108,6 +111,7 @@ def search_youtube_with_offset(query, offset=0, max_results=10):
                         'title': entry.get('title', 'Untitled'),
                         'thumbnail': entry.get('thumbnail', entry.get('thumbnails', [{}])[0].get('url', '')),
                         'channel': entry.get('uploader', entry.get('channel', 'Unknown')),
+                        'channel_id': entry.get('channel_id', entry.get('uploader_id', '')),
                         'duration': format_duration(entry.get('duration', 0)),
                         'view_count': format_views(entry.get('view_count', 0)),
                         'url': f"https://www.youtube.com/watch?v={entry.get('id', '')}"
@@ -124,6 +128,148 @@ def search_youtube_with_offset(query, offset=0, max_results=10):
         import traceback
         traceback.print_exc()
         return []
+
+        return []
+
+def get_channel_videos(channel_id):
+    """
+    Get videos from a specific channel
+    Returns list of video dictionaries
+    """
+    print(f"Fetching videos for channel: {channel_id}")
+    try:
+        ydl_opts = {
+            'quiet': False,
+            'no_warnings': False,
+            'extract_flat': True,
+            'format': 'best',
+            'ignoreerrors': True,
+            'playlistend': 30, # Limit to 30 latest videos
+        }
+        
+        # Use channel URL format
+        if channel_id.startswith('UC'):
+            url = f"https://www.youtube.com/channel/{channel_id}"
+        elif channel_id.startswith('@'):
+             url = f"https://www.youtube.com/{channel_id}"
+        else:
+            # Fallback try user or channel
+            url = f"https://www.youtube.com/channel/{channel_id}"
+            
+        print(f"Channel URL: {url}")
+        
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            result = ydl.extract_info(url, download=False)
+            
+            if not result:
+                return []
+                
+            entries = result.get('entries', [])
+            if not entries:
+                return []
+            
+            if not entries:
+                return []
+            
+            videos = []
+            
+            def process_entry(entry):
+                """Helper to extract video data from an entry"""
+                if not entry:
+                    return None
+                    
+                video = {
+                    'id': entry.get('id', ''),
+                    'title': entry.get('title', 'Untitled'),
+                    'thumbnail': entry.get('thumbnail', entry.get('thumbnails', [{}])[0].get('url', '')),
+                    'channel': entry.get('uploader', entry.get('channel', 'Unknown')),
+                    'channel_id': channel_id,
+                    'duration': format_duration(entry.get('duration', 0)),
+                    'view_count': format_views(entry.get('view_count', 0)),
+                    'upload_date': format_date(entry.get('upload_date', '')), # Add date if available
+                    'url': f"https://www.youtube.com/watch?v={entry.get('id', '')}"
+                }
+                return video
+
+            for entry in entries:
+                if entry:
+                    entry_type = entry.get('_type')
+                    # If it's a playlist (e.g. "Videos" tab, "Live" tab), iterate through its contents
+                    if entry_type == 'playlist':
+                        print(f"Processing playlist: {entry.get('title')}")
+                        playlist_entries = entry.get('entries', [])
+                        # Handle if entries is a generator or list
+                        for sub_entry in playlist_entries:
+                            v = process_entry(sub_entry)
+                            if v and v['id']:
+                                videos.append(v)
+                    # If it's a direct video entry
+                    elif entry_type == 'url' or entry.get('id'):
+                         v = process_entry(entry)
+                         if v and v['id']:
+                             videos.append(v)
+            
+            # Remove duplicates based on ID
+            unique_videos = []
+            seen_ids = set()
+            for v in videos:
+                if v['id'] not in seen_ids:
+                    unique_videos.append(v)
+                    seen_ids.add(v['id'])
+            
+            print(f"Found {len(unique_videos)} unique videos")
+            
+            # Try to fetch dates from RSS feed if we have a valid channel ID
+            # Use the channel_id from the first video if available, as it's likely the UC ID
+            if unique_videos:
+                target_channel_id = unique_videos[0].get('channel_id')
+                if not target_channel_id or not target_channel_id.startswith('UC'):
+                    target_channel_id = channel_id
+                
+                if target_channel_id and target_channel_id.startswith('UC'):
+                    print(f"Fetching RSS dates for {target_channel_id}...")
+                    rss_dates = fetch_channel_dates_rss(target_channel_id)
+                    if rss_dates:
+                        print(f"Found {len(rss_dates)} dates from RSS")
+                        for video in unique_videos:
+                            if video['id'] in rss_dates:
+                                video['upload_date'] = format_date(rss_dates[video['id']])
+            
+            return unique_videos
+            
+    except Exception as e:
+        print(f"Error fetching channel videos: {e}")
+        return []
+
+def fetch_channel_dates_rss(channel_id):
+    """
+    Fetch upload dates from YouTube RSS feed
+    Returns dict {video_id: iso_date_string}
+    """
+    try:
+        url = f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        
+        with urllib.request.urlopen(req, timeout=5) as response:
+            xml_data = response.read()
+            root = ET.fromstring(xml_data)
+            
+            # Namespace map usually needed for findall with default ns
+            ns = {'atom': 'http://www.w3.org/2005/Atom', 'yt': 'http://www.youtube.com/xml/schemas/2015'}
+            
+            dates = {}
+            # Find all entries using namespace
+            for entry in root.findall('atom:entry', ns):
+                video_id_elem = entry.find('yt:videoId', ns)
+                published_elem = entry.find('atom:published', ns)
+                
+                if video_id_elem is not None and published_elem is not None:
+                    dates[video_id_elem.text] = published_elem.text
+                    
+            return dates
+    except Exception as e:
+        print(f"Error fetching RSS dates: {e}")
+        return {}
 
 def get_trending_videos(max_results=15):
     """
@@ -308,10 +454,37 @@ def watch():
     video_data = get_video_info(video_id)
 
     if not video_data:
-        flash("Video unavailable or could not be loaded.", "error")
-        return redirect(url_for('home'))
+        # Fallback if fetching fails
+        video_data = {
+            'id': video_id,
+            'title': 'Video Player',
+            'channel': 'YouTube',
+            'channel_id': '',
+            'view_count': '',
+            'like_count': '',
+            'upload_date': '',
+            'description': 'Watch this video on ViewTube - a privacy-focused YouTube frontend.',
+            'comments': []
+        }
 
     return render_template('watch.html', video=video_data)
+
+@app.route('/channel/<channel_id>')
+def channel(channel_id):
+    """Channel page showing videos from specific channel"""
+    if not channel_id:
+        return redirect(url_for('home'))
+    
+    # Get channel name (optional, could pass as query param or fetch)
+    channel_name = request.args.get('name', 'Channel')
+    
+    videos = get_channel_videos(channel_id)
+    
+    # If we found videos, try to get the actual channel name from the first video
+    if videos and channel_name == 'Channel':
+        channel_name = videos[0].get('channel', 'Channel')
+        
+    return render_template('channel.html', channel_id=channel_id, channel_name=channel_name, videos=videos)
 
 
 def get_video_info(video_id):
@@ -368,6 +541,7 @@ def get_video_info(video_id):
                 'id': video_id,
                 'title': info.get('title', 'Untitled'),
                 'channel': info.get('uploader', 'Unknown'),
+                'channel_id': info.get('channel_id', info.get('uploader_id', '')),
                 'channel_url': info.get('uploader_url', '#'),
                 'view_count': format_views(info.get('view_count', 0)),
                 'like_count': format_number(info.get('like_count', 0)),
@@ -400,20 +574,37 @@ def format_number(num):
         return str(num)
 
 def format_date(date_str):
-    """Format date from YYYYMMDD to readable format"""
-    if not date_str or len(date_str) != 8:
+    """Format date from YYYYMMDD or ISO format to readable format"""
+    if not date_str:
         return "Unknown date"
-    
+        
     try:
-        year = date_str[0:4]
-        month = date_str[4:6]
-        day = date_str[6:8]
-        
-        months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-        month_name = months[int(month) - 1]
-        
-        return f"{month_name} {int(day)}, {year}"
+        # Handle ISO format (YYYY-MM-DD...)
+        if '-' in date_str:
+            if 'T' in date_str:
+                date_str = date_str.split('T')[0]
+            
+            parts = date_str.split('-')
+            if len(parts) == 3:
+                year, month, day = parts
+                months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+                month_name = months[int(month) - 1]
+                return f"{month_name} {int(day)}, {year}"
+
+        # Handle YYYYMMDD
+        if len(date_str) == 8 and date_str.isdigit():
+            year = date_str[0:4]
+            month = date_str[4:6]
+            day = date_str[6:8]
+            
+            months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+            month_name = months[int(month) - 1]
+            
+            return f"{month_name} {int(day)}, {year}"
+            
+        return "Unknown date"
     except:
         return "Unknown date"
 

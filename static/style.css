@@ -1259,7 +1259,9 @@ body::before {
     border-radius: var(--radius-lg);
     color: var(--text-secondary);
     border: 1px solid var(--border-color);
-}/* ========================================
+}
+
+/* ========================================
    ERROR PAGES & ALERTS
    ======================================== */
 
@@ -1398,4 +1400,85 @@ body::before {
     to {
         opacity: 1;
     }
+}
+
+/* ========================================
+   CHANNEL PAGE STYLES
+   ======================================== */
+.channel-page-header {
+    background: linear-gradient(to bottom, var(--bg-secondary), var(--bg-primary));
+    padding: var(--spacing-xl) 0;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: var(--spacing-lg);
+}
+
+.channel-profile {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-lg);
+}
+
+.channel-avatar-large {
+    width: 96px;
+    height: 96px;
+    background: linear-gradient(135deg, var(--accent-primary), #ff3366);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    font-weight: 700;
+    color: white;
+    box-shadow: 0 0 30px rgba(255, 0, 51, 0.2);
+    flex-shrink: 0;
+}
+
+.channel-details-large {
+    flex: 1;
+    min-width: 0;
+}
+
+.channel-title-large {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin-bottom: var(--spacing-xs);
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+}
+
+.channel-meta-large {
+    display: flex;
+    gap: var(--spacing-sm);
+    color: var(--text-secondary);
+    font-size: 1rem;
+    align-items: center;
+}
+
+@media (max-width: 768px) {
+    .channel-profile {
+        flex-direction: column;
+        text-align: center;
+        gap: var(--spacing-md);
+    }
+
+    .channel-meta-large {
+        justify-content: center;
+    }
+}
+
+.channel-link {
+    text-decoration: none;
+    color: inherit;
+}
+
+.channel-link:hover .channel-name {
+    color: var(--accent-primary);
+}
+
+.channel-link:hover .channel-avatar {
+    transform: scale(1.05);
+    transition: transform 0.2s;
 }

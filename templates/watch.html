@@ -85,13 +85,27 @@
             {% endif %}
 
             <!-- Channel Info -->
+            <!-- Channel Info -->
             <div class="channel-info">
+                {% if video.channel_id %}
+                <a href="/channel/{{ video.channel_id }}?name={{ video.channel }}" class="channel-link">
+                    <div class="channel-avatar">
+                        {{ video.channel[0].upper() }}
+                    </div>
+                </a>
+                <div class="channel-details">
+                    <a href="/channel/{{ video.channel_id }}?name={{ video.channel }}" class="channel-link">
+                        <h2 class="channel-name">{{ video.channel }}</h2>
+                    </a>
+                </div>
+                {% else %}
                 <div class="channel-avatar">
                     {{ video.channel[0].upper() }}
                 </div>
                 <div class="channel-details">
                     <h2 class="channel-name">{{ video.channel }}</h2>
                 </div>
+                {% endif %}
             </div>
 
             <!-- Description -->
