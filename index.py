@@ -134,7 +134,7 @@ def search_youtube_with_offset(query, offset=0, max_results=10):
 def get_channel_videos(channel_id):
     """
     Get videos from a specific channel
-    Returns list of video dictionaries
+    Returns tuple (videos, channel_info)
     """
     print(f"Fetching videos for channel: {channel_id}")
     try:
@@ -162,14 +162,31 @@ def get_channel_videos(channel_id):
             result = ydl.extract_info(url, download=False)
             
             if not result:
-                return []
+                return [], {}
+
+            # Extract channel info from result
+            channel_info = {
+                'title': result.get('channel', result.get('uploader', result.get('title', 'Channel'))),
+                'description': result.get('description', ''),
+                'thumbnail': None,
+                'banner': None
+            }
+
+            # Try to find channel avatar in thumbnails
+            # For channels, thumbnails usually contains avatars
+            thumbnails = result.get('thumbnails', [])
+            if thumbnails:
+                # Get the last one (usually highest quality)
+                channel_info['thumbnail'] = thumbnails[-1].get('url')
+            elif result.get('thumbnail'):
+                channel_info['thumbnail'] = result.get('thumbnail')
                 
             entries = result.get('entries', [])
             if not entries:
-                return []
+                return [], channel_info
             
             if not entries:
-                return []
+                return [], channel_info
             
             videos = []
             
@@ -235,11 +252,46 @@ def get_channel_videos(channel_id):
                             if video['id'] in rss_dates:
                                 video['upload_date'] = format_date(rss_dates[video['id']])
             
-            return unique_videos
+            return unique_videos, channel_info
             
     except Exception as e:
         print(f"Error fetching channel videos: {e}")
-        return []
+        return [], {}
+
+def get_channel_avatar(channel_id):
+    """
+    Fetch channel avatar URL separately using yt-dlp
+    """
+    try:
+        # Use channel URL format
+        if channel_id.startswith('UC'):
+            url = f"https://www.youtube.com/channel/{channel_id}"
+        elif channel_id.startswith('@'):
+             url = f"https://www.youtube.com/{channel_id}"
+        else:
+            url = f"https://www.youtube.com/channel/{channel_id}"
+            
+        ydl_opts = {
+            'quiet': True,
+            'no_warnings': True,
+            'extract_flat': True,
+            'playlist_items': '0', # Don't fetch any videos, just metadata
+        }
+        
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            print(f"Fetching avatar info from: {url}")
+            info = ydl.extract_info(url, download=False)
+            
+            # Try to find channel avatar in thumbnails
+            thumbnails = info.get('thumbnails', [])
+            if thumbnails:
+                return thumbnails[-1].get('url')
+                
+            return info.get('thumbnail')
+            
+    except Exception as e:
+        print(f"Error fetching channel avatar: {e}")
+        return None
 
 def fetch_channel_dates_rss(channel_id):
     """
@@ -476,15 +528,23 @@ def channel(channel_id):
         return redirect(url_for('home'))
     
     # Get channel name (optional, could pass as query param or fetch)
-    channel_name = request.args.get('name', 'Channel')
+    channel_name_param = request.args.get('name', '')
     
-    videos = get_channel_videos(channel_id)
+    videos, channel_info = get_channel_videos(channel_id)
     
-    # If we found videos, try to get the actual channel name from the first video
-    if videos and channel_name == 'Channel':
+    # Use fetched channel info if available, otherwise fallback
+    channel_name = channel_info.get('title') or channel_name_param or 'Channel'
+    channel_thumbnail = channel_info.get('thumbnail')
+    
+    # If we found videos but no channel info title, try to get from first video
+    if videos and (channel_name == 'Channel' or not channel_name):
         channel_name = videos[0].get('channel', 'Channel')
         
-    return render_template('channel.html', channel_id=channel_id, channel_name=channel_name, videos=videos)
+    return render_template('channel.html', 
+                          channel_id=channel_id, 
+                          channel_name=channel_name, 
+                          channel_thumbnail=channel_thumbnail,
+                          videos=videos)
 
 
 def get_video_info(video_id):
@@ -543,6 +603,7 @@ def get_video_info(video_id):
                 'channel': info.get('uploader', 'Unknown'),
                 'channel_id': info.get('channel_id', info.get('uploader_id', '')),
                 'channel_url': info.get('uploader_url', '#'),
+                'channel_thumbnail': info.get('channel_thumbnail') or info.get('uploader_avatar') or info.get('avatar', ''),
                 'view_count': format_views(info.get('view_count', 0)),
                 'like_count': format_number(info.get('like_count', 0)),
                 'upload_date': format_date(info.get('upload_date', '')),
@@ -552,6 +613,11 @@ def get_video_info(video_id):
                 'video_url': video_url,
                 'comments': extract_comments(info.get('comments', [])),
             }
+            
+            # Fetch channel avatar specifically if we didn't get it
+            if not video.get('channel_thumbnail') and video.get('channel_id'):
+                print(f"Fetching separate avatar for channel: {video['channel_id']}")
+                video['channel_thumbnail'] = get_channel_avatar(video['channel_id'])
             
             return video
     

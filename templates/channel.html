@@ -25,7 +25,12 @@
 <div class="channel-page-header">
     <div class="channel-profile">
         <div class="channel-avatar-large">
+            {% if channel_thumbnail %}
+            <img src="{{ channel_thumbnail }}" alt="{{ channel_name }}"
+                style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+            {% else %}
             {{ channel_name[0]|upper }}
+            {% endif %}
         </div>
         <div class="channel-details-large">
             <h1 class="channel-title-large">{{ channel_name }}</h1>
