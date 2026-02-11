@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="{% block description %}A privacy-focused, lightweight YouTube frontend. Search and watch videos without tracking.{% endblock %}">
+    <title>{% block title %}ViewTube - Privacy-Focused YouTube Frontend{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <a href="/" class="logo">
+                <div class="logo-icon">▶</div>
+                <span>ViewTube</span>
+            </a>
+            {% block header_search %}{% endblock %}
+        </div>
+    </header>
+
+    <!-- Error/Flash Messages Area -->
+    <div id="flash-messages" class="container fade-in">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">
+            <div class="alert-content">
+                {% if category == 'error' %}
+                <span class="alert-icon">⚠️</span>
+                {% else %}
+                <span class="alert-icon">ℹ️</span>
+                {% endif %}
+                <span>{{ message }}</span>
+            </div>
+            <button class="close-alert" onclick="this.parentElement.remove()">&times;</button>
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Main Content -->
+    {% block content %}
+    <main class="container {% block container_class %}{% endblock %}">
+        {% block main_content %}{% endblock %}
+    </main>
+    {% endblock %}
+
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p class="footer-text">
+            Built with Flask & yt-dlp •
+            <a href="https://github.com" class="footer-link" target="_blank" rel="noopener">View on GitHub</a>
+        </p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='autocomplete.js') }}"></script>
+    <script>
+        // Global error handling helper
+        window.showError = function (message) {
+            const container = document.getElementById('flash-messages');
+            if (!container) return;
+
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-error fade-in';
+            alert.innerHTML = `
+                <div class="alert-content">
+                    <span class="alert-icon">⚠️</span>
+                    <span>${message}</span>
+                </div>
+                <button class="close-alert" onclick="this.parentElement.remove()">&times;</button>
+            `;
+            container.appendChild(alert);
+
+            // Auto remove after 5s
+            setTimeout(() => {
+                alert.style.opacity = '0';
+                setTimeout(() => alert.remove(), 300);
+            }, 5000);
+        };
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>

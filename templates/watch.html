@@ -1,196 +1,167 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'base.html' %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="{{ video.title }} - ViewTube">
-    <title>{{ video.title }} - ViewTube</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
+{% block description %}{{ video.title }} - ViewTube{% endblock %}
+{% block title %}{{ video.title }} - ViewTube{% endblock %}
 
-<body>
-    <!-- Header -->
-    <header class="header">
-        <div class="header-content">
-            <a href="/" class="logo">
-                <div class="logo-icon">▶</div>
-                <span>ViewTube</span>
-            </a>
+{% block container_class %}watch-container{% endblock %}
 
-            <!-- Search Bar in Header -->
-            <form action="/search" method="get" class="header-search-form">
-                <div class="header-search-container">
-                    <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor" width="20" height="20">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                    <input type="text" name="q" class="header-search-input" placeholder="Search..." required
-                        autocomplete="off">
-                    <button type="submit" class="header-search-button">
-                        Search
-                    </button>
-                </div>
-            </form>
+{% block header_search %}
+<!-- Search Bar in Header -->
+<form action="/search" method="get" class="header-search-form">
+    <div class="header-search-container">
+        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+            stroke="currentColor" width="20" height="20">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input type="text" name="q" class="header-search-input" placeholder="Search..." required autocomplete="off">
+        <button type="submit" class="header-search-button">
+            Search
+        </button>
+    </div>
+</form>
+{% endblock %}
+
+{% block main_content %}
+<div class="watch-layout">
+    <!-- Video Player Section -->
+    <section class="video-player-section">
+        <!-- Video Player -->
+        <div class="video-player-wrapper">
+            {% if video.video_url %}
+            <video class="video-player" controls autoplay poster="{{ video.thumbnail }}"
+                style="background-color: black;">
+                <source src="{{ video.video_url }}" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+            {% else %}
+            <iframe src="https://www.youtube-nocookie.com/embed/{{ video.id }}" class="video-player" frameborder="0"
+                webkitallowfullscreen="1" mozallowfullscreen="1" allowfullscreen="1"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+            {% endif %}
         </div>
-    </header>
 
-    <!-- Main Content -->
-    <main class="container watch-container">
-        <div class="watch-layout">
-            <!-- Video Player Section -->
-            <section class="video-player-section">
-                <!-- Video Player -->
-                <div class="video-player-wrapper">
-                    {% if video.video_url %}
-                    <video class="video-player" controls autoplay poster="{{ video.thumbnail }}"
-                        style="background-color: black;">
-                        <source src="{{ video.video_url }}" type="video/mp4">
-                        Your browser does not support the video tag.
-                    </video>
-                    {% else %}
-                    <iframe src="https://www.youtube-nocookie.com/embed/{{ video.id }}" class="video-player"
-                        frameborder="0" webkitallowfullscreen="1" mozallowfullscreen="1" allowfullscreen="1"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+        <!-- Video Info -->
+        <div class="video-details">
+            <h1 class="video-details-title">{{ video.title }}</h1>
+
+            {% if video.view_count or video.like_count or video.upload_date %}
+            <div class="video-details-meta">
+                <div class="video-details-stats">
+                    {% if video.view_count %}
+                    <span class="stat-item">
+                        <svg class="stat-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor" width="20" height="20">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        {{ video.view_count }}
+                    </span>
+                    {% endif %}
+                    {% if video.like_count %}
+                    <span class="stat-item">
+                        <svg class="stat-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor" width="20" height="20">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                        </svg>
+                        {{ video.like_count }} likes
+                    </span>
+                    {% endif %}
+                    {% if video.upload_date %}
+                    <span class="stat-item">
+                        <svg class="stat-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor" width="20" height="20">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        {{ video.upload_date }}
+                    </span>
                     {% endif %}
                 </div>
+            </div>
+            {% endif %}
 
-                <!-- Video Info -->
-                <div class="video-details">
-                    <h1 class="video-details-title">{{ video.title }}</h1>
+            <!-- Channel Info -->
+            <div class="channel-info">
+                <div class="channel-avatar">
+                    {{ video.channel[0].upper() }}
+                </div>
+                <div class="channel-details">
+                    <h2 class="channel-name">{{ video.channel }}</h2>
+                </div>
+            </div>
 
-                    {% if video.view_count or video.like_count or video.upload_date %}
-                    <div class="video-details-meta">
-                        <div class="video-details-stats">
-                            {% if video.view_count %}
-                            <span class="stat-item">
-                                <svg class="stat-icon" xmlns="http://www.w3.org/2000/svg" fill="none"
-                                    viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                </svg>
-                                {{ video.view_count }}
-                            </span>
-                            {% endif %}
-                            {% if video.like_count %}
-                            <span class="stat-item">
-                                <svg class="stat-icon" xmlns="http://www.w3.org/2000/svg" fill="none"
-                                    viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
+            <!-- Description -->
+            {% if video.description %}
+            <div class="video-description-container">
+                <h3 class="description-title">Description</h3>
+                <div class="video-description">
+                    {{ video.description }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Comments Section -->
+            <div class="comments-section">
+                <div class="comments-header">
+                    <h3 class="comments-title">Comments</h3>
+                </div>
+
+                {% if video.comments %}
+                {% for comment in video.comments %}
+                <div class="comment-item">
+                    <div class="comment-avatar">
+                        {% if comment.author_thumbnail %}
+                        <img src="{{ comment.author_thumbnail }}" alt="{{ comment.author }}">
+                        {% else %}
+                        {{ comment.author[0] | default('A') }}
+                        {% endif %}
+                    </div>
+                    <div class="comment-content">
+                        <div class="comment-author-header">
+                            <span class="comment-author">{{ comment.author }}</span>
+                        </div>
+                        <div class="comment-text">{{ comment.text }}</div>
+                        <div class="comment-actions">
+                            <span class="comment-like">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
                                 </svg>
-                                {{ video.like_count }} likes
+                                {{ comment.like_count }}
                             </span>
-                            {% endif %}
-                            {% if video.upload_date %}
-                            <span class="stat-item">
-                                <svg class="stat-icon" xmlns="http://www.w3.org/2000/svg" fill="none"
-                                    viewBox="0 0 24 24" stroke="currentColor" width="20" height="20">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                                {{ video.upload_date }}
-                            </span>
-                            {% endif %}
                         </div>
-                    </div>
-                    {% endif %}
-
-                    <!-- Channel Info -->
-                    <div class="channel-info">
-                        <div class="channel-avatar">
-                            {{ video.channel[0].upper() }}
-                        </div>
-                        <div class="channel-details">
-                            <h2 class="channel-name">{{ video.channel }}</h2>
-                        </div>
-                    </div>
-
-                    <!-- Description -->
-                    {% if video.description %}
-                    <div class="video-description-container">
-                        <h3 class="description-title">Description</h3>
-                        <div class="video-description">
-                            {{ video.description }}
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    <!-- Comments Section -->
-                    <div class="comments-section">
-                        <div class="comments-header">
-                            <h3 class="comments-title">Comments</h3>
-                        </div>
-
-                        {% if video.comments %}
-                        {% for comment in video.comments %}
-                        <div class="comment-item">
-                            <div class="comment-avatar">
-                                {% if comment.author_thumbnail %}
-                                <img src="{{ comment.author_thumbnail }}" alt="{{ comment.author }}">
-                                {% else %}
-                                {{ comment.author[0] | default('A') }}
-                                {% endif %}
-                            </div>
-                            <div class="comment-content">
-                                <div class="comment-author-header">
-                                    <span class="comment-author">{{ comment.author }}</span>
-                                </div>
-                                <div class="comment-text">{{ comment.text }}</div>
-                                <div class="comment-actions">
-                                    <span class="comment-like">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                            stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
-                                        </svg>
-                                        {{ comment.like_count }}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                        {% else %}
-                        <p class="no-comments">No comments available.</p>
-                        {% endif %}
                     </div>
                 </div>
-            </section>
-
-            <!-- Sidebar (Optional - for future features like related videos) -->
-            <aside class="video-sidebar">
-                <div class="sidebar-card">
-                    <div class="sidebar-icon">🔒</div>
-                    <h3 class="sidebar-title">Privacy First</h3>
-                    <p class="sidebar-text">
-                        This video is embedded using YouTube's privacy-enhanced mode (nocookie).
-                    </p>
-                </div>
-
-                <div class="sidebar-card">
-                    <div class="sidebar-icon">⚡</div>
-                    <h3 class="sidebar-title">Fast & Lightweight</h3>
-                    <p class="sidebar-text">
-                        No ads, no tracking, just the video you want to watch.
-                    </p>
-                </div>
-            </aside>
+                {% endfor %}
+                {% else %}
+                <p class="no-comments">No comments available.</p>
+                {% endif %}
+            </div>
         </div>
-    </main>
+    </section>
 
-    <!-- Footer -->
-    <footer class="footer">
-        <p class="footer-text">
-            Built with Flask & yt-dlp •
-            <a href="https://github.com" class="footer-link" target="_blank" rel="noopener">View on GitHub</a>
-        </p>
-    </footer>
+    <!-- Sidebar (Optional - for future features like related videos) -->
+    <aside class="video-sidebar">
+        <div class="sidebar-card">
+            <div class="sidebar-icon">🔒</div>
+            <h3 class="sidebar-title">Privacy First</h3>
+            <p class="sidebar-text">
+                This video is embedded using YouTube's privacy-enhanced mode (nocookie).
+            </p>
+        </div>
 
-    <!-- Autocomplete Script -->
-    <script src="{{ url_for('static', filename='autocomplete.js') }}"></script>
-</body>
-
-</html>
+        <div class="sidebar-card">
+            <div class="sidebar-icon">⚡</div>
+            <h3 class="sidebar-title">Fast & Lightweight</h3>
+            <p class="sidebar-text">
+                No ads, no tracking, just the video you want to watch.
+            </p>
+        </div>
+    </aside>
+</div>
+{% endblock %}

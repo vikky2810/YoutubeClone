@@ -1,9 +1,19 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify
+from flask import Flask, render_template, request, redirect, url_for, jsonify, flash, abort
 import yt_dlp
 import re
 import random
+import os
 
 app = Flask(__name__)
+app.secret_key = os.environ.get('SECRET_KEY', 'dev-viewtube-secret-key')
+
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('404.html'), 404
+
+@app.errorhandler(500)
+def internal_server_error(e):
+    return render_template('500.html'), 500
 
 def search_youtube(query, max_results=10):
     """
@@ -59,7 +69,8 @@ def search_youtube(query, max_results=10):
         print(f"Error searching YouTube: {e}")
         import traceback
         traceback.print_exc()
-        return []
+        raise e  # Propagate error so caller can handle it or show 500
+
 
 def search_youtube_with_offset(query, offset=0, max_results=10):
     """
@@ -152,7 +163,7 @@ def trending():
         return jsonify(videos)
     except Exception as e:
         print(f"Trending API error: {e}")
-        return jsonify([])
+        return jsonify({'error': 'Failed to fetch trending videos', 'details': str(e)}), 500
 
 @app.route('/api/autocomplete')
 def autocomplete():
@@ -277,8 +288,12 @@ def search():
     if not query:
         return redirect(url_for('home'))
     
-    # Search YouTube (limited to 10 results for Vercel safety)
-    videos = search_youtube(query, max_results=10)
+    try:
+        # Search YouTube (limited to 10 results for Vercel safety)
+        videos = search_youtube(query, max_results=10)
+    except Exception as e:
+        flash(f"Search failed: {str(e)}", "error")
+        videos = []
     
     return render_template('results.html', query=query, videos=videos)
 
@@ -293,17 +308,8 @@ def watch():
     video_data = get_video_info(video_id)
 
     if not video_data:
-        # Fallback if fetching fails
-        video_data = {
-            'id': video_id,
-            'title': 'Video Player',
-            'channel': 'YouTube',
-            'view_count': '',
-            'like_count': '',
-            'upload_date': '',
-            'description': 'Watch this video on ViewTube - a privacy-focused YouTube frontend.',
-            'comments': []
-        }
+        flash("Video unavailable or could not be loaded.", "error")
+        return redirect(url_for('home'))
 
     return render_template('watch.html', video=video_data)
 

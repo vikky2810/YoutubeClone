@@ -11,12 +11,22 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
 
     fetch('/api/trending')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    throw new Error(err.error || 'Failed to load trending videos');
+                }).catch(() => {
+                    throw new Error('Failed to load trending videos');
+                });
+            }
+            return response.json();
+        })
         .then(videos => {
             if (!videos || videos.length === 0) {
                 trendingContainer.innerHTML = `
                     <div class="error-state">
-                        <p>Could not load trending videos at the moment.</p>
+                        <div class="no-results-icon">😕</div>
+                        <p>No trending videos currently available.</p>
                     </div>
                 `;
                 return;
@@ -33,9 +43,17 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .catch(error => {
             console.error('Error fetching trending videos:', error);
+
+            // Show toast error
+            if (window.showError) {
+                window.showError(error.message);
+            }
+
             trendingContainer.innerHTML = `
                 <div class="error-state">
+                    <div class="no-results-icon">⚠️</div>
                     <p>Failed to load trending content.</p>
+                    <button onclick="location.reload()" class="back-home-button" style="margin-top: 1rem; font-size: 0.9rem; padding: 0.5rem 1rem;">Retry</button>
                 </div>
             `;
         });

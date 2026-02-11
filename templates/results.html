@@ -1,106 +1,78 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'base.html' %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Search results for {{ query }} - ViewTube">
-    <title>{{ query }} - ViewTube</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
+{% block description %}Search results for {{ query }} - ViewTube{% endblock %}
+{% block title %}{{ query }} - ViewTube{% endblock %}
 
-<body>
-    <!-- Header -->
-    <header class="header">
-        <div class="header-content">
-            <a href="/" class="logo">
-                <div class="logo-icon">▶</div>
-                <span>ViewTube</span>
-            </a>
+{% block header_search %}
+<!-- Search Bar in Header -->
+<form action="/search" method="get" class="header-search-form">
+    <div class="header-search-container">
+        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+            stroke="currentColor" width="20" height="20">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input type="text" name="q" class="header-search-input" placeholder="Search..." value="{{ query }}" required
+            autocomplete="off">
+        <button type="submit" class="header-search-button">
+            Search
+        </button>
+    </div>
+</form>
+{% endblock %}
 
-            <!-- Search Bar in Header -->
-            <form action="/search" method="get" class="header-search-form">
-                <div class="header-search-container">
-                    <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor" width="20" height="20">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                    <input type="text" name="q" class="header-search-input" placeholder="Search..." value="{{ query }}"
-                        required autocomplete="off">
-                    <button type="submit" class="header-search-button">
-                        Search
-                    </button>
+{% block main_content %}
+<!-- Results Header -->
+<div class="results-header">
+    <h1 class="results-title">
+        Search results for
+        <span class="text-gradient">"{{ query }}"</span>
+    </h1>
+    <p class="results-count">{{ videos|length }} videos found</p>
+</div>
+
+<!-- Video Grid -->
+{% if videos %}
+<div class="video-grid">
+    {% for video in videos %}
+    <article class="video-card">
+        <a href="/watch?v={{ video.id }}" class="video-link">
+            <!-- Thumbnail -->
+            <div class="video-thumbnail-wrapper">
+                <img src="{{ video.thumbnail }}" alt="{{ video.title }}" class="video-thumbnail" loading="lazy">
+                <span class="video-duration">{{ video.duration }}</span>
+            </div>
+
+            <!-- Video Info -->
+            <div class="video-info">
+                <h2 class="video-title" title="{{ video.title }}">
+                    {{ video.title }}
+                </h2>
+                <div class="video-meta">
+                    <p class="video-channel">{{ video.channel }}</p>
+                    <p class="video-stats">{{ video.view_count }}</p>
                 </div>
-            </form>
-        </div>
-    </header>
+            </div>
+        </a>
+    </article>
+    {% endfor %}
+</div>
+{% else %}
+<!-- No Results -->
+<div class="no-results">
+    <div class="no-results-icon">🔍</div>
+    <h2 class="no-results-title">No videos found</h2>
+    <p class="no-results-text">
+        Try different keywords or check your spelling
+    </p>
+    <a href="/" class="back-home-button">
+        ← Back to Home
+    </a>
+</div>
+{% endif %}
+{% endblock %}
 
-    <!-- Main Content -->
-    <main class="container">
-        <!-- Results Header -->
-        <div class="results-header">
-            <h1 class="results-title">
-                Search results for
-                <span class="text-gradient">"{{ query }}"</span>
-            </h1>
-            <p class="results-count">{{ videos|length }} videos found</p>
-        </div>
-
-        <!-- Video Grid -->
-        {% if videos %}
-        <div class="video-grid">
-            {% for video in videos %}
-            <article class="video-card">
-                <a href="/watch?v={{ video.id }}" class="video-link">
-                    <!-- Thumbnail -->
-                    <div class="video-thumbnail-wrapper">
-                        <img src="{{ video.thumbnail }}" alt="{{ video.title }}" class="video-thumbnail" loading="lazy">
-                        <span class="video-duration">{{ video.duration }}</span>
-                    </div>
-
-                    <!-- Video Info -->
-                    <div class="video-info">
-                        <h2 class="video-title" title="{{ video.title }}">
-                            {{ video.title }}
-                        </h2>
-                        <div class="video-meta">
-                            <p class="video-channel">{{ video.channel }}</p>
-                            <p class="video-stats">{{ video.view_count }}</p>
-                        </div>
-                    </div>
-                </a>
-            </article>
-            {% endfor %}
-        </div>
-        {% else %}
-        <!-- No Results -->
-        <div class="no-results">
-            <div class="no-results-icon">🔍</div>
-            <h2 class="no-results-title">No videos found</h2>
-            <p class="no-results-text">
-                Try different keywords or check your spelling
-            </p>
-            <a href="/" class="back-home-button">
-                ← Back to Home
-            </a>
-        </div>
-        {% endif %}
-    </main>
-
-    <!-- Footer -->
-    <footer class="footer">
-        <p class="footer-text">
-            Built with Flask & yt-dlp •
-            <a href="https://github.com" class="footer-link" target="_blank" rel="noopener">View on GitHub</a>
-        </p>
-    </footer>
-
-    <!-- Autocomplete Script -->
-    <script src="{{ url_for('static', filename='autocomplete.js') }}"></script>
-
-    <!-- Infinite Scroll Script -->
-    <script src="{{ url_for('static', filename='infinite-scroll.js') }}"></script>
-</body>
-
-</html>
+{% block scripts %}
+<!-- Infinite Scroll Script -->
+<script src="{{ url_for('static', filename='infinite-scroll.js') }}"></script>
+{% endblock %}
