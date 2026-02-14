@@ -35,9 +35,36 @@ endblock %}
 <!-- Trending Section -->
 <section class="trending-section">
     <h2 class="section-title">Trending Now</h2>
-    <div id="trending-container" class="video-grid">
-        <!-- Trending videos will be loaded here via JS -->
+    {% if videos %}
+    <div class="video-grid">
+        {% for video in videos %}
+        <article class="video-card">
+            <a href="/watch?v={{ video.id }}" class="video-link">
+                <!-- Thumbnail -->
+                <div class="video-thumbnail-wrapper">
+                    <img src="{{ video.thumbnail }}" alt="{{ video.title }}" class="video-thumbnail" loading="lazy">
+                    <span class="video-duration">{{ video.duration }}</span>
+                </div>
+
+                <!-- Video Info -->
+                <div class="video-info">
+                    <h2 class="video-title" title="{{ video.title }}">
+                        {{ video.title }}
+                    </h2>
+                    <div class="video-meta">
+                        <p class="video-channel">{{ video.channel }}</p>
+                        <p class="video-stats">{{ video.view_count }}</p>
+                    </div>
+                </div>
+            </a>
+        </article>
+        {% endfor %}
     </div>
+    {% else %}
+    <div class="no-results">
+        <p>No trending videos currently available.</p>
+    </div>
+    {% endif %}
 </section>
 
 <!-- Features Section -->
@@ -74,5 +101,5 @@ endblock %}
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='trending.js') }}"></script>
+
 {% endblock %}

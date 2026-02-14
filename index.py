@@ -476,8 +476,15 @@ def format_views(count):
 
 @app.route('/')
 def home():
-    """Home page with search input"""
-    return render_template('home.html')
+    """Home page with search input and trending videos"""
+    try:
+        # Fetch trending videos server-side
+        videos = get_trending_videos(max_results=12)
+    except Exception as e:
+        print(f"Error fetching trending: {e}")
+        videos = []
+        
+    return render_template('home.html', videos=videos)
 
 @app.route('/search')
 def search():
