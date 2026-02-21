@@ -3,8 +3,72 @@ import yt_dlp
 import re
 import random
 import os
+import socket
 import urllib.request
 import xml.etree.ElementTree as ET
+import mock_data
+import invidious
+import time
+
+# ─────────────────────────────────────────────────────────────────────
+# THREE-TIER DATA SOURCE  (auto-selected per request, cached 60 s)
+#
+#  Tier 1 — yt-dlp        : YouTube DNS resolves  OR  VERCEL env set
+#  Tier 2 — Invidious API : YouTube blocked, but Invidious reachable
+#  Tier 3 — Static mock   : Everything offline (last resort only)
+# ─────────────────────────────────────────────────────────────────────
+_net_cache   = {'yt': None, 'inv': None, 'at': 0}
+CACHE_TTL    = 60   # seconds
+
+def check_network():
+    """Cached DNS check — returns True if YouTube is directly reachable."""
+    global _net_cache
+    now = time.time()
+    if now - _net_cache['at'] < CACHE_TTL and _net_cache['yt'] is not None:
+        return _net_cache['yt']
+    try:
+        socket.setdefaulttimeout(4)
+        socket.getaddrinfo('www.youtube.com', 443)
+        result = True
+    except OSError:
+        result = False
+    _net_cache['yt'] = result
+    _net_cache['at'] = now
+    return result
+
+def get_data_source():
+    """
+    Returns the backend to use for this request:
+      'ytdlp'     — real yt-dlp calls (YouTube directly reachable)
+      'invidious' — Invidious proxy API (YouTube blocked but Invidious ok)
+      'mock'      — static hardcoded data (nothing works)
+    """
+    # Vercel always uses yt-dlp
+    if os.environ.get('VERCEL'):
+        return 'ytdlp'
+
+    # Check YouTube directly
+    if check_network():
+        print("[ViewTube] Source: yt-dlp (YouTube reachable)")
+        return 'ytdlp'
+
+    # Check Invidious (cache result too)
+    global _net_cache
+    now = time.time()
+    if _net_cache['inv'] is None or now - _net_cache['at'] >= CACHE_TTL:
+        _net_cache['inv'] = invidious.is_available()
+        _net_cache['at']  = now
+
+    if _net_cache['inv']:
+        print("[ViewTube] Source: Invidious proxy (YouTube blocked)")
+        return 'invidious'
+
+    print("[ViewTube] Source: static mock (all networks blocked)")
+    return 'mock'
+
+# Keep backward compat for any remaining call sites
+def should_use_mock():
+    return get_data_source() == 'mock'
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-viewtube-secret-key')
@@ -26,11 +90,13 @@ def search_youtube(query, max_results=10):
     print(f"Searching for: {query}")  # Debug log
     try:
         ydl_opts = {
-            'quiet': False,  # Show output for debugging
-            'no_warnings': False,
-            'extract_flat': True,  # Don't download, just get metadata
-            'format': 'best',
-            'ignoreerrors': True,  # Continue on errors
+            'quiet': True,
+            'no_warnings': True,
+            'extract_flat': 'in_playlist',  # Fast extraction
+            'force_generic_extractor': False,
+            'noprogress': True,
+            'check_formats': False,
+            'ignoreerrors': True,
         }
         
         # IMPORTANT: Use ytsearch prefix for YouTube search
@@ -325,43 +391,85 @@ def fetch_channel_dates_rss(channel_id):
 
 def get_trending_videos(max_results=15):
     """
-    Get trending videos.
-    Since real trending feed can be tricky with region locks, 
-    we use a mix of popular categories if direct trending fails.
+    Fetch niche developer / coding content instead of generic regional trending.
+    Picks 3 random topics, fetches a few results from each, then merges & shuffles
+    so every home page load feels fresh.
     """
-    print("Fetching trending videos...")
-    
-    # Try multiple strategies
-    strategies = [
-        "Programming tutorials real project builds",
-        "AI tools and automation software",
-        "Tech career guidance and salary breakdown",
-        "Startup SaaS indie hacker journey",
-        "Productivity deep work systems",
-        "Personal growth and mindset",
-        "System design and backend explainers",
-        "Developer tools IDEs setup",
-        "Freelancing online income for developers",
-        "Interview preparation DSA patterns"
+    print("Fetching niche trending videos...")
+
+    NICHE_TOPICS = [
+        # Core coding
+        "programming tutorial project build 2024",
+        "debugging error fixing coding tips",
+        "data structures algorithms explained",
+        "system design backend architecture explained",
+        # College-relevant
+        "final year college project walkthrough",
+        "open source github project review",
+        # Applied AI
+        "AI automation practical project tutorial",
+        "machine learning project from scratch",
+        # Tools & career
+        "developer tools productivity setup",
+        "realistic tech career guidance developer",
+        # Long-form learning
+        "full course programming beginner to advanced",
+        "software engineering fundamentals deep dive",
+        # Hot sub-topics
+        "REST API backend project tutorial",
+        "database design SQL NoSQL explained",
+        "clean code refactoring best practices",
+        "git github workflow for developers",
+        "docker containerization tutorial beginner",
+        "competitive programming problem solving",
     ]
-    
-    # Randomly pick a category to keep the home page fresh
-    query = random.choice(strategies)
-    print(f"Trending strategy: search for '{query}'")
-    
-    return search_youtube(query, max_results)
+
+    # Pick 3 different random topics
+    selected = random.sample(NICHE_TOPICS, k=3)
+    per_topic = max(5, max_results // 3)
+
+    all_videos = []
+    seen_ids   = set()
+
+    for topic in selected:
+        print(f"  → Fetching: '{topic}'")
+        try:
+            results = search_youtube(topic, max_results=per_topic)
+            for v in (results or []):
+                if v.get('id') not in seen_ids:
+                    seen_ids.add(v['id'])
+                    all_videos.append(v)
+        except Exception as e:
+            print(f"  → Error for '{topic}': {e}")
+
+    random.shuffle(all_videos)
+    return all_videos[:max_results]
 
 @app.route('/api/trending')
 def trending():
-    """
-    API endpoint to fetch trending videos
-    """
-    try:
-        videos = get_trending_videos(max_results=12)
-        return jsonify(videos)
-    except Exception as e:
-        print(f"Trending API error: {e}")
-        return jsonify({'error': 'Failed to fetch trending videos', 'details': str(e)}), 500
+    """API endpoint to fetch trending videos — 3-tier fallback."""
+    source = get_data_source()
+
+    if source == 'ytdlp':
+        try:
+            videos = get_trending_videos(max_results=12)
+            if videos:
+                return jsonify(videos)
+        except Exception as e:
+            print(f"[yt-dlp] trending error: {e}")
+        # yt-dlp failed mid-flight, try invidious
+        source = 'invidious'
+
+    if source == 'invidious':
+        videos = invidious.get_trending(max_results=12)
+        if videos:
+            return jsonify(videos)
+        # Invidious also failed
+        source = 'mock'
+
+    # Tier 3: static mock
+    return jsonify(mock_data.get_mock_trending())
+
 
 @app.route('/api/autocomplete')
 def autocomplete():
@@ -384,22 +492,33 @@ def autocomplete():
 
 @app.route('/api/search-more')
 def search_more():
-    """
-    API endpoint for infinite scroll - load more search results
-    """
-    query = request.args.get('q', '').strip()
+    """Infinite scroll — load more results with 3-tier fallback."""
+    query  = request.args.get('q', '').strip()
     offset = int(request.args.get('offset', 0))
-    
     if not query:
         return jsonify({'videos': []})
-    
-    try:
-        # Fetch 10 more results starting from offset
-        videos = search_youtube_with_offset(query, offset, max_results=10)
-        return jsonify({'videos': videos})
-    except Exception as e:
-        print(f"Search more error: {e}")
-        return jsonify({'videos': [], 'error': str(e)})
+
+    source = get_data_source()
+
+    if source == 'ytdlp':
+        try:
+            videos = search_youtube_with_offset(query, offset, max_results=10)
+            return jsonify({'videos': videos or []})
+        except Exception as e:
+            print(f"[yt-dlp] search-more error: {e}")
+            source = 'invidious'
+
+    if source == 'invidious':
+        videos = invidious.search(query, max_results=10)
+        if videos:
+            page = videos[offset:offset + 10]
+            return jsonify({'videos': page})
+        source = 'mock'
+
+    results   = mock_data.get_mock_search(query)
+    page      = results[offset:offset + 10] if offset < len(results) else []
+    return jsonify({'videos': page})
+
 
 def get_search_suggestions(query):
     """
@@ -477,81 +596,110 @@ def format_views(count):
 @app.route('/')
 def home():
     """Home page with search input and trending videos"""
-    try:
-        # Fetch trending videos server-side
-        videos = get_trending_videos(max_results=12)
-    except Exception as e:
-        print(f"Error fetching trending: {e}")
-        videos = []
-        
-    return render_template('home.html', videos=videos)
+    # Don't fetch videos synchronously to avoid blocking page load
+    # client-side JS will fetch from /api/trending
+    return render_template('home.html', videos=[])
 
 @app.route('/search')
 def search():
-    """Search results page"""
+    """Search results page — 3-tier fallback."""
     query = request.args.get('q', '').strip()
     if not query:
         return redirect(url_for('home'))
-    
-    try:
-        # Search YouTube (limited to 10 results for Vercel safety)
-        videos = search_youtube(query, max_results=10)
-    except Exception as e:
-        flash(f"Search failed: {str(e)}", "error")
-        videos = []
-    
+
+    source = get_data_source()
+
+    if source == 'ytdlp':
+        try:
+            videos = search_youtube(query, max_results=10)
+            if videos:
+                return render_template('results.html', query=query, videos=videos)
+        except Exception as e:
+            print(f"[yt-dlp] search error: {e}")
+        source = 'invidious'
+
+    if source == 'invidious':
+        videos = invidious.search(query, max_results=10)
+        if videos:
+            return render_template('results.html', query=query, videos=videos)
+        source = 'mock'
+
+    videos = mock_data.get_mock_search(query)
     return render_template('results.html', query=query, videos=videos)
+
 
 @app.route('/watch')
 def watch():
-    """Watch page with video player"""
+    """Watch page — 3-tier fallback."""
     video_id = request.args.get('v', '')
     if not video_id:
         return redirect(url_for('home'))
-    
-    # Fetch detailed video info including title, description, and comments
-    video_data = get_video_info(video_id)
 
-    if not video_data:
-        # Fallback if fetching fails
-        video_data = {
-            'id': video_id,
-            'title': 'Video Player',
-            'channel': 'YouTube',
-            'channel_id': '',
-            'view_count': '',
-            'like_count': '',
-            'upload_date': '',
-            'description': 'Watch this video on ViewTube - a privacy-focused YouTube frontend.',
-            'comments': []
-        }
+    source = get_data_source()
 
+    if source == 'ytdlp':
+        try:
+            video_data = get_video_info(video_id)
+            if video_data:
+                return render_template('watch.html', video=video_data)
+        except Exception as e:
+            print(f"[yt-dlp] watch error: {e}")
+        source = 'invidious'
+
+    if source == 'invidious':
+        video_data = invidious.get_video_info(video_id)
+        if video_data:
+            return render_template('watch.html', video=video_data)
+        source = 'mock'
+
+    video_data = mock_data.get_mock_video_info(video_id)
     return render_template('watch.html', video=video_data)
+
 
 @app.route('/channel/<channel_id>')
 def channel(channel_id):
-    """Channel page showing videos from specific channel"""
+    """Channel page — 3-tier fallback."""
     if not channel_id:
         return redirect(url_for('home'))
-    
-    # Get channel name (optional, could pass as query param or fetch)
+
     channel_name_param = request.args.get('name', '')
-    
-    videos, channel_info = get_channel_videos(channel_id)
-    
-    # Use fetched channel info if available, otherwise fallback
-    channel_name = channel_info.get('title') or channel_name_param or 'Channel'
-    channel_thumbnail = channel_info.get('thumbnail')
-    
-    # If we found videos but no channel info title, try to get from first video
-    if videos and (channel_name == 'Channel' or not channel_name):
-        channel_name = videos[0].get('channel', 'Channel')
-        
-    return render_template('channel.html', 
-                          channel_id=channel_id, 
-                          channel_name=channel_name, 
-                          channel_thumbnail=channel_thumbnail,
-                          videos=videos)
+    source = get_data_source()
+
+    if source == 'ytdlp':
+        try:
+            videos, channel_info = get_channel_videos(channel_id)
+            if videos:
+                channel_name = channel_info.get('title') or channel_name_param or 'Channel'
+                if channel_name == 'Channel' and videos:
+                    channel_name = videos[0].get('channel', 'Channel')
+                return render_template('channel.html',
+                                       channel_id=channel_id,
+                                       channel_name=channel_name,
+                                       channel_thumbnail=channel_info.get('thumbnail'),
+                                       videos=videos)
+        except Exception as e:
+            print(f"[yt-dlp] channel error: {e}")
+        source = 'invidious'
+
+    if source == 'invidious':
+        videos, channel_info = invidious.get_channel(channel_id)
+        if videos:
+            channel_name = channel_info.get('title') or channel_name_param or 'Channel'
+            return render_template('channel.html',
+                                   channel_id=channel_id,
+                                   channel_name=channel_name,
+                                   channel_thumbnail=channel_info.get('thumbnail', ''),
+                                   videos=videos)
+        source = 'mock'
+
+    videos, channel_info = mock_data.get_mock_channel(channel_id)
+    channel_name = channel_name_param or channel_info.get('title', 'Demo Channel')
+    return render_template('channel.html',
+                           channel_id=channel_id,
+                           channel_name=channel_name,
+                           channel_thumbnail=channel_info.get('thumbnail', ''),
+                           videos=videos)
+
 
 
 def get_video_info(video_id):
@@ -562,15 +710,16 @@ def get_video_info(video_id):
     print(f"Fetching video info for ID: {video_id}")  # Debug
     try:
         ydl_opts = {
-            'quiet': False,
-            'no_warnings': False,
-            'format': 'best', # Get best available, we will filter manually
-            'get_comments': True,
+            'quiet': True,
+            'no_warnings': True,
+            'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+            'get_comments': False, # Extremely slow, disable by default
             'extract_flat': False,
+            'skip_download': True,
+            'ignoreerrors': True,
         }
         
         url = f"https://www.youtube.com/watch?v={video_id}"
-        print(f"URL: {url}")
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)

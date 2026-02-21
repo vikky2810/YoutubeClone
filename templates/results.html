@@ -1,57 +1,82 @@
 {% extends 'base.html' %}
 
 {% block description %}Search results for {{ query }} - ViewTube{% endblock %}
-{% block title %}{{ query }} - ViewTube{% endblock %}
+{% block title %}{{ query }} - ViewTube Search{% endblock %}
 
 {% block header_search %}
-<!-- Search Bar in Header -->
-<form action="/search" method="get" class="header-search-form">
-    <div class="header-search-container">
-        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-            stroke="currentColor" width="20" height="20">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
-        <input type="text" name="q" class="header-search-input" placeholder="Search..." value="{{ query }}" required
-            autocomplete="off">
-        <button type="submit" class="header-search-button">
-            Search
+<!-- Search Bar in Header (pre-filled) -->
+<form action="/search" method="get" class="yt-search-form" id="yt-search-form" role="search">
+    <div class="yt-search-wrapper">
+        <div class="yt-search-box">
+            <input type="text" name="q" class="yt-search-input" id="main-search-input" placeholder="Search"
+                value="{{ query }}" autocomplete="off" aria-label="Search">
+            <button type="submit" class="yt-search-btn" aria-label="Search">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                    <path
+                        d="M20.87 20.17l-5.59-5.59C16.35 13.35 17 11.75 17 10c0-3.87-3.13-7-7-7s-7 3.13-7 7 3.13 7 7 7c1.75 0 3.35-.65 4.58-1.71l5.59 5.59.7-.71zM10 16c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z" />
+                </svg>
+            </button>
+        </div>
+        <button type="button" class="yt-mic-btn" aria-label="Search with voice">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                <path
+                    d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z" />
+            </svg>
         </button>
     </div>
 </form>
 {% endblock %}
 
+{% block container_class %}results-page{% endblock %}
+
 {% block main_content %}
-<!-- Results Header -->
-<div class="results-header">
-    <h1 class="results-title">
-        Search results for
-        <span class="text-gradient">"{{ query }}"</span>
-    </h1>
-    <p class="results-count">{{ videos|length }} videos found</p>
+<!-- Filter Bar -->
+<div class="yt-results-filter-bar">
+    <button class="yt-icon-btn yt-filter-icon-btn" aria-label="Filters">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+            <path
+                d="M4.25 5.61C6.27 8.2 10 13 10 13v6c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-6s3.72-4.8 5.74-7.39c.51-.66.04-1.61-.79-1.61H5.04c-.83 0-1.3.95-.79 1.61z" />
+        </svg>
+        Filters
+    </button>
 </div>
 
-<!-- Video Grid -->
+<!-- Results Content -->
 {% if videos %}
-<div class="video-grid">
+<div class="yt-results-list" id="results-list">
     {% for video in videos %}
-    <article class="video-card">
-        <a href="/watch?v={{ video.id }}" class="video-link">
+    <article class="yt-result-card">
+        <a href="/watch?v={{ video.id }}" class="yt-result-card-link" aria-label="{{ video.title }}">
             <!-- Thumbnail -->
-            <div class="video-thumbnail-wrapper">
-                <img src="{{ video.thumbnail }}" alt="{{ video.title }}" class="video-thumbnail" loading="lazy">
-                <span class="video-duration">{{ video.duration }}</span>
+            <div class="yt-result-thumbnail-wrapper">
+                <img src="{{ video.thumbnail }}" alt="{{ video.title }}" class="yt-result-thumbnail" loading="lazy">
+                {% if video.duration %}
+                <span class="yt-duration">{{ video.duration }}</span>
+                {% endif %}
             </div>
-
-            <!-- Video Info -->
-            <div class="video-info">
-                <h2 class="video-title" title="{{ video.title }}">
-                    {{ video.title }}
-                </h2>
-                <div class="video-meta">
-                    <p class="video-channel">{{ video.channel }}</p>
-                    <p class="video-stats">{{ video.view_count }}</p>
+            <!-- Info -->
+            <div class="yt-result-info">
+                <h3 class="yt-result-title" title="{{ video.title }}">{{ video.title }}</h3>
+                <div class="yt-result-meta">
+                    <span class="yt-result-views">{{ video.view_count }}</span>
+                    {% if video.upload_date %}
+                    <span class="yt-result-dot">•</span>
+                    <span class="yt-result-date">{{ video.upload_date }}</span>
+                    {% endif %}
                 </div>
+                <div class="yt-result-channel">
+                    <div class="yt-result-channel-icon">
+                        <span>{{ video.channel[0]|upper if video.channel else 'V' }}</span>
+                    </div>
+                    <span class="yt-result-channel-name">{{ video.channel }}</span>
+                    <svg class="yt-verified-icon" viewBox="0 0 24 24" width="14" height="14" fill="#aaa">
+                        <path
+                            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                    </svg>
+                </div>
+                <p class="yt-result-description">
+                    Search result for "{{ query }}" — Watch "{{ video.title }}" and more related videos on ViewTube.
+                </p>
             </div>
         </a>
     </article>
@@ -59,15 +84,14 @@
 </div>
 {% else %}
 <!-- No Results -->
-<div class="no-results">
-    <div class="no-results-icon">🔍</div>
-    <h2 class="no-results-title">No videos found</h2>
-    <p class="no-results-text">
-        Try different keywords or check your spelling
-    </p>
-    <a href="/" class="back-home-button">
-        ← Back to Home
-    </a>
+<div class="yt-no-results">
+    <svg viewBox="0 0 24 24" width="64" height="64" fill="#aaa">
+        <path
+            d="M11 15h2v2h-2zm0-8h2v6h-2zm.99-5C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z" />
+    </svg>
+    <h2>No results found for "<strong>{{ query }}</strong>"</h2>
+    <p>Try different keywords or check your spelling</p>
+    <a href="/" class="yt-btn-secondary">← Back to Home</a>
 </div>
 {% endif %}
 {% endblock %}

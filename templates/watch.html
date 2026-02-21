@@ -2,190 +2,275 @@
 
 {% block description %}{{ video.title }} - ViewTube{% endblock %}
 {% block title %}{{ video.title }} - ViewTube{% endblock %}
-
-{% block container_class %}watch-container{% endblock %}
+{% block body_class %}watch-page{% endblock %}
 
 {% block header_search %}
-<!-- Search Bar in Header -->
-<form action="/search" method="get" class="header-search-form">
-    <div class="header-search-container">
-        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-            stroke="currentColor" width="20" height="20">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
-        <input type="text" name="q" class="header-search-input" placeholder="Search..." required autocomplete="off">
-        <button type="submit" class="header-search-button">
-            Search
+<form action="/search" method="get" class="yt-search-form" id="yt-search-form" role="search">
+    <div class="yt-search-wrapper">
+        <div class="yt-search-box">
+            <input type="text" name="q" class="yt-search-input" id="main-search-input" placeholder="Search"
+                autocomplete="off" aria-label="Search">
+            <button type="submit" class="yt-search-btn" aria-label="Search">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                    <path
+                        d="M20.87 20.17l-5.59-5.59C16.35 13.35 17 11.75 17 10c0-3.87-3.13-7-7-7s-7 3.13-7 7 3.13 7 7 7c1.75 0 3.35-.65 4.58-1.71l5.59 5.59.7-.71zM10 16c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z" />
+                </svg>
+            </button>
+        </div>
+        <button type="button" class="yt-mic-btn" aria-label="Search with voice">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                <path
+                    d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z" />
+            </svg>
         </button>
     </div>
 </form>
 {% endblock %}
 
-{% block main_content %}
-<div class="watch-layout">
-    <!-- Video Player Section -->
-    <section class="video-player-section">
+{% block content %}
+<div class="yt-watch-layout">
+    <!-- Primary Column: Video + Details -->
+    <div class="yt-watch-primary">
         <!-- Video Player -->
-        <div class="video-player-wrapper">
+        <div class="yt-player-wrapper">
             {% if video.video_url %}
-            <video class="video-player" controls autoplay poster="{{ video.thumbnail }}"
-                style="background-color: black;">
+            <video class="yt-player" controls autoplay poster="{{ video.thumbnail }}">
                 <source src="{{ video.video_url }}" type="video/mp4">
                 Your browser does not support the video tag.
             </video>
             {% else %}
-            <iframe src="https://www.youtube-nocookie.com/embed/{{ video.id }}" class="video-player" frameborder="0"
+            <iframe src="https://www.youtube-nocookie.com/embed/{{ video.id }}" class="yt-player" frameborder="0"
                 webkitallowfullscreen="1" mozallowfullscreen="1" allowfullscreen="1"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
+            </iframe>
             {% endif %}
         </div>
 
-        <!-- Video Info -->
-        <div class="video-details">
-            <h1 class="video-details-title">{{ video.title }}</h1>
+        <!-- Video Title -->
+        <h1 class="yt-watch-title">{{ video.title }}</h1>
 
-            {% if video.view_count or video.like_count or video.upload_date %}
-            <div class="video-details-meta">
-                <div class="video-details-stats">
-                    {% if video.view_count %}
-                    <span class="stat-item">
-                        <svg class="stat-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                            stroke="currentColor" width="20" height="20">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                        {{ video.view_count }}
-                    </span>
-                    {% endif %}
-                    {% if video.like_count %}
-                    <span class="stat-item">
-                        <svg class="stat-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                            stroke="currentColor" width="20" height="20">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
-                        </svg>
-                        {{ video.like_count }} likes
-                    </span>
-                    {% endif %}
-                    {% if video.upload_date %}
-                    <span class="stat-item">
-                        <svg class="stat-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                            stroke="currentColor" width="20" height="20">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        {{ video.upload_date }}
-                    </span>
-                    {% endif %}
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Channel Info -->
-            <!-- Channel Info -->
-            <div class="channel-info">
+        <!-- Action Bar -->
+        <div class="yt-watch-action-bar">
+            <!-- Channel Info (left) -->
+            <div class="yt-watch-channel">
                 {% if video.channel_id %}
-                <a href="/channel/{{ video.channel_id }}?name={{ video.channel }}" class="channel-link">
-                    <div class="channel-avatar">
+                <a href="/channel/{{ video.channel_id }}?name={{ video.channel }}" class="yt-watch-channel-link">
+                    <div class="yt-watch-channel-avatar">
                         {% if video.channel_thumbnail %}
-                        <img src="{{ video.channel_thumbnail }}" alt="{{ video.channel }}"
-                            style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+                        <img src="{{ video.channel_thumbnail }}" alt="{{ video.channel }}">
                         {% else %}
-                        {{ video.channel[0].upper() }}
+                        <span>{{ video.channel[0]|upper if video.channel else 'V' }}</span>
                         {% endif %}
+                    </div>
+                    <div class="yt-watch-channel-info">
+                        <span class="yt-watch-channel-name">{{ video.channel }}</span>
                     </div>
                 </a>
-                <div class="channel-details">
-                    <a href="/channel/{{ video.channel_id }}?name={{ video.channel }}" class="channel-link">
-                        <h2 class="channel-name">{{ video.channel }}</h2>
-                    </a>
-                </div>
                 {% else %}
-                <div class="channel-avatar">
+                <div class="yt-watch-channel-avatar">
                     {% if video.channel_thumbnail %}
-                    <img src="{{ video.channel_thumbnail }}" alt="{{ video.channel }}"
-                        style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+                    <img src="{{ video.channel_thumbnail }}" alt="{{ video.channel }}">
                     {% else %}
-                    {{ video.channel[0].upper() }}
+                    <span>{{ video.channel[0]|upper if video.channel else 'V' }}</span>
                     {% endif %}
                 </div>
-                <div class="channel-details">
-                    <h2 class="channel-name">{{ video.channel }}</h2>
+                <div class="yt-watch-channel-info">
+                    <span class="yt-watch-channel-name">{{ video.channel }}</span>
                 </div>
                 {% endif %}
+                <button class="yt-subscribe-btn" id="subscribe-btn">Subscribe</button>
             </div>
 
-            <!-- Description -->
-            {% if video.description %}
-            <div class="video-description-container">
-                <h3 class="description-title">Description</h3>
-                <div class="video-description">
-                    {{ video.description }}
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Comments Section -->
-            <div class="comments-section">
-                <div class="comments-header">
-                    <h3 class="comments-title">Comments</h3>
-                </div>
-
-                {% if video.comments %}
-                {% for comment in video.comments %}
-                <div class="comment-item">
-                    <div class="comment-avatar">
-                        {% if comment.author_thumbnail %}
-                        <img src="{{ comment.author_thumbnail }}" alt="{{ comment.author }}">
+            <!-- Action Buttons (right) -->
+            <div class="yt-watch-actions">
+                <div class="yt-like-dislike-group">
+                    <button class="yt-action-btn yt-like-btn" id="like-btn" aria-label="Like video">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                            <path
+                                d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-1.91l-.01-.01L23 10z" />
+                        </svg>
+                        {% if video.like_count %}
+                        <span>{{ video.like_count }}</span>
                         {% else %}
-                        {{ comment.author[0] | default('A') }}
+                        <span>Like</span>
+                        {% endif %}
+                    </button>
+                    <div class="yt-like-divider"></div>
+                    <button class="yt-action-btn" aria-label="Dislike video">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                            <path
+                                d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v1.91l.01.01L1 14c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z" />
+                        </svg>
+                    </button>
+                </div>
+                <button class="yt-action-btn" id="share-btn" aria-label="Share">
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                        <path
+                            d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z" />
+                    </svg>
+                    Share
+                </button>
+                <button class="yt-action-btn" aria-label="Save to playlist">
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                        <path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z" />
+                    </svg>
+                    Save
+                </button>
+                <button class="yt-action-btn yt-more-btn" aria-label="More options">
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                        <path
+                            d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Description Box -->
+        <div class="yt-description-box" id="description-box">
+            <div class="yt-description-meta">
+                {% if video.view_count %}<span class="yt-desc-views">{{ video.view_count }} views</span>{% endif %}
+                {% if video.upload_date %}<span class="yt-desc-date">{{ video.upload_date }}</span>{% endif %}
+            </div>
+            {% if video.description %}
+            <div class="yt-description-text" id="desc-text">{{ video.description }}</div>
+            <button class="yt-desc-expand-btn" id="desc-expand-btn">
+                <span id="desc-expand-label">Show more</span>
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" id="desc-expand-icon">
+                    <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" />
+                </svg>
+            </button>
+            {% endif %}
+        </div>
+
+        <!-- Comments Section -->
+        <div class="yt-comments-section">
+            <div class="yt-comments-header">
+                <h2 class="yt-comments-count">
+                    {% if video.comments %}{{ video.comments|length }} Comments{% else %}Comments{% endif %}
+                </h2>
+                <button class="yt-comments-sort-btn" aria-label="Sort comments">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                        <path d="M3 18h6v-2H3v2zM3 6v2h18V6H3zm0 7h12v-2H3v2z" />
+                    </svg>
+                    Sort by
+                </button>
+            </div>
+
+            <!-- Add Comment Bar -->
+            <div class="yt-add-comment">
+                <div class="yt-add-comment-avatar">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                        <path
+                            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z" />
+                    </svg>
+                </div>
+                <input type="text" class="yt-add-comment-input" placeholder="Add a comment..."
+                    aria-label="Add a comment">
+            </div>
+
+            <!-- Comment List -->
+            {% if video.comments %}
+            <div class="yt-comments-list">
+                {% for comment in video.comments %}
+                <div class="yt-comment">
+                    <div class="yt-comment-avatar">
+                        {% if comment.author_thumbnail %}
+                        <img src="{{ comment.author_thumbnail }}" alt="{{ comment.author }}" loading="lazy">
+                        {% else %}
+                        <span>{{ comment.author[0]|default('A') }}</span>
                         {% endif %}
                     </div>
-                    <div class="comment-content">
-                        <div class="comment-author-header">
-                            <span class="comment-author">{{ comment.author }}</span>
+                    <div class="yt-comment-body">
+                        <div class="yt-comment-header">
+                            <span class="yt-comment-author">{{ comment.author }}</span>
                         </div>
-                        <div class="comment-text">{{ comment.text }}</div>
-                        <div class="comment-actions">
-                            <span class="comment-like">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                    stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                        <p class="yt-comment-text">{{ comment.text }}</p>
+                        <div class="yt-comment-actions">
+                            <button class="yt-comment-like-btn" aria-label="Like comment">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                                    <path
+                                        d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-1.91l-.01-.01L23 10z" />
                                 </svg>
-                                {{ comment.like_count }}
-                            </span>
+                                {% if comment.like_count and comment.like_count != '0' %}
+                                <span>{{ comment.like_count }}</span>
+                                {% endif %}
+                            </button>
+                            <button class="yt-comment-dislike-btn" aria-label="Dislike comment">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                                    <path
+                                        d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v1.91l.01.01L1 14c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z" />
+                                </svg>
+                            </button>
+                            <button class="yt-comment-reply-btn">Reply</button>
                         </div>
                     </div>
                 </div>
                 {% endfor %}
-                {% else %}
-                <p class="no-comments">No comments available.</p>
-                {% endif %}
+            </div>
+            {% else %}
+            <p class="yt-no-comments">No comments available.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Secondary Column: Related / Sidebar -->
+    <aside class="yt-watch-secondary">
+        <div class="yt-sidebar-privacy-note">
+            <div class="yt-privacy-icon">🔒</div>
+            <div>
+                <strong>Privacy First</strong>
+                <p>This video is embedded using YouTube's privacy-enhanced mode.</p>
             </div>
         </div>
-    </section>
-
-    <!-- Sidebar (Optional - for future features like related videos) -->
-    <aside class="video-sidebar">
-        <div class="sidebar-card">
-            <div class="sidebar-icon">🔒</div>
-            <h3 class="sidebar-title">Privacy First</h3>
-            <p class="sidebar-text">
-                This video is embedded using YouTube's privacy-enhanced mode (nocookie).
-            </p>
+        <div class="yt-sidebar-tip">
+            <div class="yt-privacy-icon">⚡</div>
+            <div>
+                <strong>Fast & Lightweight</strong>
+                <p>No ads, no tracking, just the video you want to watch.</p>
+            </div>
         </div>
-
-        <div class="sidebar-card">
-            <div class="sidebar-icon">⚡</div>
-            <h3 class="sidebar-title">Fast & Lightweight</h3>
-            <p class="sidebar-text">
-                No ads, no tracking, just the video you want to watch.
-            </p>
+        <div class="yt-sidebar-tip">
+            <div class="yt-privacy-icon">🎯</div>
+            <div>
+                <strong>Search More</strong>
+                <p>Use the search bar to find more videos on ViewTube.</p>
+            </div>
         </div>
     </aside>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Description expand/collapse
+    const descText = document.getElementById('desc-text');
+    const expandBtn = document.getElementById('desc-expand-btn');
+    const expandLabel = document.getElementById('desc-expand-label');
+    const expandIcon = document.getElementById('desc-expand-icon');
+    let expanded = false;
+
+    if (expandBtn && descText) {
+        expandBtn.addEventListener('click', () => {
+            expanded = !expanded;
+            descText.classList.toggle('expanded', expanded);
+            expandLabel.textContent = expanded ? 'Show less' : 'Show more';
+            expandIcon.style.transform = expanded ? 'rotate(180deg)' : '';
+        });
+    }
+
+    // Subscribe button toggle
+    const subscribeBtn = document.getElementById('subscribe-btn');
+    if (subscribeBtn) {
+        subscribeBtn.addEventListener('click', () => {
+            subscribeBtn.classList.toggle('subscribed');
+            subscribeBtn.textContent = subscribeBtn.classList.contains('subscribed') ? 'Subscribed' : 'Subscribe';
+        });
+    }
+
+    // Like button toggle
+    const likeBtn = document.getElementById('like-btn');
+    if (likeBtn) {
+        likeBtn.addEventListener('click', () => likeBtn.classList.toggle('liked'));
+    }
+</script>
 {% endblock %}

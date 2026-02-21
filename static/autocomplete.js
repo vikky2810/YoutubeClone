@@ -1,5 +1,4 @@
-// Autocomplete functionality for search inputs
-
+// Autocomplete functionality for YouTube-style search inputs
 class SearchAutocomplete {
     constructor(inputElement, formElement) {
         this.input = inputElement;
@@ -13,15 +12,11 @@ class SearchAutocomplete {
     }
 
     init() {
-        // Create dropdown element
         this.createDropdown();
-
-        // Add event listeners
         this.input.addEventListener('input', (e) => this.handleInput(e));
         this.input.addEventListener('keydown', (e) => this.handleKeydown(e));
         this.input.addEventListener('focus', (e) => this.handleFocus(e));
 
-        // Close dropdown when clicking outside
         document.addEventListener('click', (e) => {
             if (!this.input.contains(e.target) && !this.dropdown.contains(e.target)) {
                 this.hideDropdown();
@@ -31,20 +26,28 @@ class SearchAutocomplete {
 
     createDropdown() {
         this.dropdown = document.createElement('div');
-        this.dropdown.className = 'autocomplete-dropdown';
-        this.dropdown.style.display = 'none';
+        this.dropdown.className = 'yt-autocomplete-dropdown';
+        this.dropdown.style.cssText = `
+            position: absolute;
+            background: #212121;
+            width: 100%;
+            border-radius: 0 0 12px 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            z-index: 2000;
+            display: none;
+            overflow: hidden;
+            border: 1px solid #333;
+            border-top: none;
+        `;
 
-        // Insert dropdown after the input's parent container
-        const container = this.input.closest('.search-container, .header-search-container');
+        const container = this.input.closest('.yt-search-box, .yt-hero-search-box');
         if (container) {
-            container.parentNode.insertBefore(this.dropdown, container.nextSibling);
+            container.appendChild(this.dropdown);
         }
     }
 
     handleInput(e) {
         const query = e.target.value.trim();
-
-        // Clear previous timer
         clearTimeout(this.debounceTimer);
 
         if (query.length < 2) {
@@ -52,21 +55,18 @@ class SearchAutocomplete {
             return;
         }
 
-        // Debounce API calls (wait 300ms after user stops typing)
         this.debounceTimer = setTimeout(() => {
             this.fetchSuggestions(query);
-        }, 300);
+        }, 200);
     }
 
     async fetchSuggestions(query) {
         try {
             const response = await fetch(`/api/autocomplete?q=${encodeURIComponent(query)}`);
             const suggestions = await response.json();
-
             this.suggestions = suggestions;
             this.displaySuggestions(suggestions);
         } catch (error) {
-            console.error('Error fetching suggestions:', error);
             this.hideDropdown();
         }
     }
@@ -82,16 +82,22 @@ class SearchAutocomplete {
 
         suggestions.forEach((suggestion, index) => {
             const item = document.createElement('div');
-            item.className = 'autocomplete-item';
+            item.className = 'yt-autocomplete-item';
             item.textContent = suggestion;
-            item.dataset.index = index;
+            item.style.cssText = `
+                padding: 8px 16px;
+                cursor: pointer;
+                color: #f1f1f1;
+                font-size: 14px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            `;
 
-            // Click handler
             item.addEventListener('click', () => {
                 this.selectSuggestion(suggestion);
             });
 
-            // Hover handler
             item.addEventListener('mouseenter', () => {
                 this.highlightItem(index);
             });
@@ -103,11 +109,8 @@ class SearchAutocomplete {
     }
 
     handleKeydown(e) {
-        if (!this.dropdown || this.dropdown.style.display === 'none') {
-            return;
-        }
-
-        const items = this.dropdown.querySelectorAll('.autocomplete-item');
+        if (!this.dropdown || this.dropdown.style.display === 'none') return;
+        const items = this.dropdown.querySelectorAll('.yt-autocomplete-item');
 
         switch (e.key) {
             case 'ArrowDown':
@@ -115,24 +118,18 @@ class SearchAutocomplete {
                 this.selectedIndex = Math.min(this.selectedIndex + 1, items.length - 1);
                 this.highlightItem(this.selectedIndex);
                 break;
-
             case 'ArrowUp':
                 e.preventDefault();
                 this.selectedIndex = Math.max(this.selectedIndex - 1, -1);
-                if (this.selectedIndex === -1) {
-                    this.clearHighlight();
-                } else {
-                    this.highlightItem(this.selectedIndex);
-                }
+                if (this.selectedIndex === -1) this.clearHighlight();
+                else this.highlightItem(this.selectedIndex);
                 break;
-
             case 'Enter':
-                if (this.selectedIndex >= 0 && this.selectedIndex < this.suggestions.length) {
+                if (this.selectedIndex >= 0) {
                     e.preventDefault();
                     this.selectSuggestion(this.suggestions[this.selectedIndex]);
                 }
                 break;
-
             case 'Escape':
                 this.hideDropdown();
                 break;
@@ -141,27 +138,19 @@ class SearchAutocomplete {
 
     handleFocus(e) {
         const query = e.target.value.trim();
-        if (query.length >= 2 && this.suggestions.length > 0) {
-            this.showDropdown();
-        }
+        if (query.length >= 2 && this.suggestions.length > 0) this.showDropdown();
     }
 
     highlightItem(index) {
-        const items = this.dropdown.querySelectorAll('.autocomplete-item');
+        const items = this.dropdown.querySelectorAll('.yt-autocomplete-item');
         items.forEach((item, i) => {
-            if (i === index) {
-                item.classList.add('active');
-                // Scroll item into view if needed
-                item.scrollIntoView({ block: 'nearest' });
-            } else {
-                item.classList.remove('active');
-            }
+            item.style.background = i === index ? '#444' : 'transparent';
         });
     }
 
     clearHighlight() {
-        const items = this.dropdown.querySelectorAll('.autocomplete-item');
-        items.forEach(item => item.classList.remove('active'));
+        const items = this.dropdown.querySelectorAll('.yt-autocomplete-item');
+        items.forEach(item => item.style.background = 'transparent');
     }
 
     selectSuggestion(suggestion) {
@@ -170,29 +159,15 @@ class SearchAutocomplete {
         this.form.submit();
     }
 
-    showDropdown() {
-        this.dropdown.style.display = 'block';
-    }
-
-    hideDropdown() {
-        this.dropdown.style.display = 'none';
-        this.selectedIndex = -1;
-    }
+    showDropdown() { this.dropdown.style.display = 'block'; }
+    hideDropdown() { this.dropdown.style.display = 'none'; this.selectedIndex = -1; }
 }
 
-// Initialize autocomplete on page load
 document.addEventListener('DOMContentLoaded', () => {
-    // Home page search
-    const homeSearchInput = document.querySelector('.search-input');
-    const homeSearchForm = document.querySelector('.search-form');
-    if (homeSearchInput && homeSearchForm) {
-        new SearchAutocomplete(homeSearchInput, homeSearchForm);
-    }
-
-    // Header search (on results and watch pages)
-    const headerSearchInput = document.querySelector('.header-search-input');
-    const headerSearchForm = document.querySelector('.header-search-form');
-    if (headerSearchInput && headerSearchForm) {
-        new SearchAutocomplete(headerSearchInput, headerSearchForm);
-    }
+    // Standard YouTube inputs
+    const inputs = document.querySelectorAll('.yt-search-input, .yt-hero-search-input');
+    inputs.forEach(input => {
+        const form = input.closest('form');
+        if (form) new SearchAutocomplete(input, form);
+    });
 });
