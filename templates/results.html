@@ -66,7 +66,14 @@
                 </div>
                 <div class="yt-result-channel">
                     <div class="yt-result-channel-icon">
+                        {% if video.channel_id %}
+                        <img src="/api/channel-avatar?channel_id={{ video.channel_id | urlencode }}"
+                            alt="{{ video.channel }}" class="yt-channel-avatar-img" loading="lazy"
+                            onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                        <span style="display:none;">{{ video.channel[0]|upper if video.channel else 'V' }}</span>
+                        {% else %}
                         <span>{{ video.channel[0]|upper if video.channel else 'V' }}</span>
+                        {% endif %}
                     </div>
                     <span class="yt-result-channel-name">{{ video.channel }}</span>
                     <svg class="yt-verified-icon" viewBox="0 0 24 24" width="14" height="14" fill="#aaa">

@@ -485,6 +485,58 @@ def autocomplete():
     suggestions = get_search_suggestions(query)
     return jsonify(suggestions)
 
+# ── Channel avatar cache: {channel_id: (timestamp, url_or_None)} ──
+_avatar_cache = {}
+AVATAR_TTL = 600  # 10 minutes
+
+@app.route('/api/channel-avatar')
+def channel_avatar():
+    """
+    Fetch and redirect to a YouTube channel's avatar image.
+    Cached in-memory to avoid repeated yt-dlp calls.
+    Returns 302 redirect to the avatar URL, or 404 if unavailable.
+    """
+    channel_id = request.args.get('channel_id', '').strip()
+    if not channel_id:
+        abort(404)
+
+    now = time.time()
+
+    # Return cached result if still fresh
+    cached = _avatar_cache.get(channel_id)
+    if cached:
+        ts, avatar_url = cached
+        if now - ts < AVATAR_TTL:
+            if avatar_url:
+                return redirect(avatar_url)
+            abort(404)
+
+    avatar_url = None
+    source = get_data_source()
+
+    # Tier 1: yt-dlp
+    if source == 'ytdlp':
+        try:
+            avatar_url = get_channel_avatar(channel_id)
+        except Exception as e:
+            print(f"[Avatar] yt-dlp error for {channel_id}: {e}")
+
+    # Tier 2: Invidious
+    if not avatar_url and source in ('ytdlp', 'invidious'):
+        try:
+            _, ch_info = invidious.get_channel(channel_id)
+            avatar_url = ch_info.get('thumbnail') or ch_info.get('authorThumbnails', [{}])[-1].get('url')
+        except Exception as e:
+            print(f"[Avatar] Invidious error for {channel_id}: {e}")
+
+    _avatar_cache[channel_id] = (now, avatar_url)
+
+    if avatar_url:
+        return redirect(avatar_url)
+    abort(404)
+
+
+
 @app.route('/api/search-more')
 def search_more():
     """Infinite scroll — load more results with 3-tier fallback."""

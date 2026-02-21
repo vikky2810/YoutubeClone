@@ -156,7 +156,17 @@ endblock %}
                     </div>
                     <div class="yt-video-card-info">
                         <div class="yt-channel-icon-small">
-                            <span>${video.channel ? video.channel[0].toUpperCase() : 'V'}</span>
+                            ${video.channel_id
+                    ? `<img
+                                    src="/api/channel-avatar?channel_id=${encodeURIComponent(video.channel_id)}"
+                                    alt="${video.channel || 'Channel'}"
+                                    class="yt-channel-avatar-img"
+                                    loading="lazy"
+                                    onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
+                                  >
+                                  <span style="display:none;">${video.channel ? video.channel[0].toUpperCase() : 'V'}</span>`
+                    : `<span>${video.channel ? video.channel[0].toUpperCase() : 'V'}</span>`
+                }
                         </div>
                         <div class="yt-video-card-text">
                             <h3 class="yt-video-card-title" title="${video.title}">${video.title}</h3>
