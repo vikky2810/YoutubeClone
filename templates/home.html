@@ -33,10 +33,10 @@ endblock %}
 <!-- Video Grid Content -->
 <div id="home-content">
     <div class="yt-video-grid" id="home-video-grid">
-        <!-- Videos will be injected here by JS -->
+        <!-- Videos injected by JS -->
     </div>
 
-    <!-- Loading State -->
+    <!-- Initial Loading State -->
     <div id="loading-spinner" class="yt-loading-container">
         <div class="yt-spinner"></div>
         <p>Loading trending videos...</p>
@@ -52,6 +52,16 @@ endblock %}
         <p id="error-text">Check your internet connection or try searching for a video.</p>
         <button onclick="location.reload()" class="yt-btn-secondary"
             style="margin-top: 16px; padding: 8px 16px; border-radius: 18px; border: 1px solid #555; background: transparent; color: white; cursor: pointer;">Retry</button>
+    </div>
+
+    <!-- Infinite Scroll Sentinel + bottom spinner -->
+    <div id="scroll-sentinel" style="height: 1px;"></div>
+    <div id="bottom-spinner" class="yt-loading-container" style="display: none; padding: 32px 0;">
+        <div class="yt-spinner"></div>
+        <p>Loading more videos...</p>
+    </div>
+    <div id="end-of-feed" style="display: none; text-align: center; padding: 24px; color: #aaa; font-size: 14px;">
+        — You're all caught up —
     </div>
 </div>
 
@@ -88,109 +98,149 @@ endblock %}
     document.addEventListener('DOMContentLoaded', function () {
         const grid = document.getElementById('home-video-grid');
         const loader = document.getElementById('loading-spinner');
-        const error = document.getElementById('error-message');
+        const errorBox = document.getElementById('error-message');
+        const sentinel = document.getElementById('scroll-sentinel');
+        const botSpinner = document.getElementById('bottom-spinner');
+        const endOfFeed = document.getElementById('end-of-feed');
 
-        function fetchTrending() {
-            fetch('/api/trending')
-                .then(response => {
-                    // Always parse JSON, even on error status
-                    return response.json().then(data => ({ status: response.status, data }));
-                })
-                .then(({ status, data }) => {
+        const PAGE_SIZE = 12;
+        let currentOffset = 0;
+        let isLoading = false;
+        let hasMore = true;
+        let activeFilter = 'all'; // 'all' uses trending, anything else uses search
+
+        // ─── Video card renderer ───────────────────────────────────────
+        function makeCard(video) {
+            const article = document.createElement('article');
+            article.className = 'yt-video-card';
+            article.tabIndex = 0;
+            article.innerHTML = `
+                <a href="/watch?v=${video.id}" class="yt-video-card-link" aria-label="${video.title}">
+                    <div class="yt-thumbnail-wrapper">
+                        <img src="${video.thumbnail}" alt="${video.title}" class="yt-thumbnail" loading="lazy">
+                        ${video.duration ? `<span class="yt-duration">${video.duration}</span>` : ''}
+                    </div>
+                    <div class="yt-video-card-info">
+                        <div class="yt-channel-icon-small">
+                            <span>${video.channel ? video.channel[0].toUpperCase() : 'V'}</span>
+                        </div>
+                        <div class="yt-video-card-text">
+                            <h3 class="yt-video-card-title" title="${video.title}">${video.title}</h3>
+                            <p class="yt-video-card-channel">${video.channel}</p>
+                            <p class="yt-video-card-meta">${video.view_count}</p>
+                        </div>
+                    </div>
+                </a>
+            `;
+            return article;
+        }
+
+        function appendVideos(videos) {
+            videos.forEach(v => grid.appendChild(makeCard(v)));
+        }
+
+        // ─── Fetch a page of videos ────────────────────────────────────
+        async function fetchPage(offset) {
+            if (isLoading || !hasMore) return;
+            isLoading = true;
+
+            const isFirstLoad = offset === 0;
+            if (isFirstLoad) {
+                loader.style.display = 'flex';
+                errorBox.style.display = 'none';
+            } else {
+                botSpinner.style.display = 'flex';
+            }
+
+            try {
+                let url;
+                if (activeFilter === 'all') {
+                    url = `/api/trending?offset=${offset}`;
+                } else {
+                    url = `/api/search-more?q=${encodeURIComponent(activeFilter)}&offset=${offset}`;
+                }
+
+                const resp = await fetch(url);
+                const raw = await resp.json();
+
+                // /api/trending returns [] array; /api/search-more returns { videos: [] }
+                const videos = Array.isArray(raw) ? raw : (raw.videos || []);
+
+                loader.style.display = 'none';
+
+                if (isFirstLoad && videos.length === 0) {
+                    errorBox.style.display = 'flex';
+                    document.getElementById('error-title').textContent = 'No videos found';
+                    document.getElementById('error-text').textContent = 'Try searching for a specific topic.';
+                    hasMore = false;
+                    return;
+                }
+
+                if (videos.length < PAGE_SIZE) {
+                    // Received a partial page — this is the last one
+                    hasMore = false;
+                }
+
+                if (videos.length === 0) {
+                    endOfFeed.style.display = 'block';
+                    return;
+                }
+
+                appendVideos(videos);
+                currentOffset += videos.length;
+
+                if (!hasMore) endOfFeed.style.display = 'block';
+
+            } catch (err) {
+                console.error('Fetch error:', err);
+                if (offset === 0) {
                     loader.style.display = 'none';
-
-                    // Handle typed errors from backend
-                    if (data.error) {
-                        error.style.display = 'flex';
-                        if (data.error === 'network_error') {
-                            document.getElementById('error-title').textContent = '🌐 No Internet Connection';
-                            document.getElementById('error-text').textContent =
-                                'The server cannot reach YouTube. Make sure your internet connection is active, then restart the Flask server.';
-                        } else if (data.error === 'no_results') {
-                            document.getElementById('error-title').textContent = 'No Trending Videos';
-                            document.getElementById('error-text').textContent =
-                                'YouTube returned no results right now. Try searching for something specific.';
-                        } else {
-                            document.getElementById('error-title').textContent = 'Something Went Wrong';
-                            document.getElementById('error-text').textContent = data.message || 'An unexpected error occurred.';
-                        }
-                        return;
-                    }
-
-                    // Success
-                    if (!data || data.length === 0) {
-                        error.style.display = 'flex';
-                        document.getElementById('error-title').textContent = "No videos found";
-                        document.getElementById('error-text').textContent = "Try searching for a specific topic.";
-                        return;
-                    }
-                    renderVideos(data);
-                })
-                .catch(err => {
-                    console.error('Fetch error:', err);
-                    loader.style.display = 'none';
-                    error.style.display = 'flex';
+                    errorBox.style.display = 'flex';
                     document.getElementById('error-title').textContent = '⚠️ Connection Failed';
                     document.getElementById('error-text').textContent =
                         'Could not contact the server. Make sure Flask is running on port 5000.';
-                });
+                }
+            } finally {
+                isLoading = false;
+                botSpinner.style.display = 'none';
+            }
         }
 
-        function renderVideos(videos) {
-            grid.innerHTML = videos.map(video => `
-                <article class="yt-video-card" tabindex="0">
-                    <a href="/watch?v=${video.id}" class="yt-video-card-link" aria-label="${video.title}">
-                        <div class="yt-thumbnail-wrapper">
-                            <img src="${video.thumbnail}" alt="${video.title}" class="yt-thumbnail" loading="lazy">
-                            ${video.duration ? `<span class="yt-duration">${video.duration}</span>` : ''}
-                        </div>
-                        <div class="yt-video-card-info">
-                            <div class="yt-channel-icon-small">
-                                <span>${video.channel ? video.channel[0].toUpperCase() : 'V'}</span>
-                            </div>
-                            <div class="yt-video-card-text">
-                                <h3 class="yt-video-card-title" title="${video.title}">${video.title}</h3>
-                                <p class="yt-video-card-channel">${video.channel}</p>
-                                <p class="yt-video-card-meta">${video.view_count}</p>
-                            </div>
-                        </div>
-                    </a>
-                </article>
-            `).join('');
+        // ─── Reset & load fresh (on chip change) ───────────────────────
+        function resetAndLoad(filter) {
+            activeFilter = filter;
+            currentOffset = 0;
+            hasMore = true;
+            grid.innerHTML = '';
+            endOfFeed.style.display = 'none';
+            errorBox.style.display = 'none';
+            loader.style.display = 'flex';
+            fetchPage(0);
         }
 
-        // Action!
-        fetchTrending();
+        // ─── IntersectionObserver for infinite scroll ──────────────────
+        const observer = new IntersectionObserver(entries => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && hasMore && !isLoading) {
+                    fetchPage(currentOffset);
+                }
+            });
+        }, { rootMargin: '400px' });   // trigger 400px before sentinel enters view
 
-        // Chip filter interaction
+        observer.observe(sentinel);
+
+        // ─── Chip filter interaction ───────────────────────────────────
         const chips = document.querySelectorAll('.yt-chip');
         chips.forEach(chip => {
             chip.addEventListener('click', () => {
                 chips.forEach(c => c.classList.remove('active'));
                 chip.classList.add('active');
-
-                // Optional: Re-fetch based on filter
                 const filter = chip.getAttribute('data-filter');
-                if (filter !== 'all') {
-                    grid.innerHTML = '';
-                    loader.style.display = 'flex';
-                    error.style.display = 'none';
-                    // Simulation of search for simplicity
-                    fetch(`/api/search-more?q=${filter}&offset=0`)
-                        .then(r => r.json())
-                        .then(data => {
-                            loader.style.display = 'none';
-                            renderVideos(data.videos);
-                        });
-                } else {
-                    grid.innerHTML = '';
-                    loader.style.display = 'flex';
-                    fetchTrending();
-                }
+                resetAndLoad(filter === 'all' ? 'all' : filter);
             });
         });
 
-        // Chips scroll
+        // ─── Chips scroll button ───────────────────────────────────────
         const scrollBtn = document.querySelector('.yt-chips-scroll-right');
         const chipsWrapper = document.querySelector('.yt-chips-wrapper');
         if (scrollBtn && chipsWrapper) {
@@ -198,6 +248,9 @@ endblock %}
                 chipsWrapper.scrollBy({ left: 200, behavior: 'smooth' });
             });
         }
+
+        // ─── Initial load ──────────────────────────────────────────────
+        fetchPage(0);
     });
 </script>
 {% endblock %}

@@ -5,10 +5,12 @@ import random
 import os
 import socket
 import urllib.request
+import urllib.parse
 import xml.etree.ElementTree as ET
 import mock_data
 import invidious
 import time
+import json
 
 # ─────────────────────────────────────────────────────────────────────
 # THREE-TIER DATA SOURCE  (auto-selected per request, cached 60 s)
@@ -19,6 +21,16 @@ import time
 # ─────────────────────────────────────────────────────────────────────
 _net_cache   = {'yt': None, 'inv': None, 'at': 0}
 CACHE_TTL    = 60   # seconds
+
+# ── Suggestion cache: {query: (timestamp, [results])} ──
+_suggest_cache = {}
+SUGGEST_TTL    = 300  # 5 minutes
+
+# ── Trending pool cache ──
+_trending_cache = {'videos': [], 'at': 0}
+TRENDING_TTL    = 600   # 10 minutes — refresh once per session roughly
+TRENDING_POOL   = 36    # fetch this many up-front; JS pages through in chunks of 12
+TRENDING_PAGE   = 12    # videos per infinite-scroll page
 
 def check_network():
     """Cached DNS check — returns True if YouTube is directly reachable."""
@@ -124,7 +136,7 @@ def search_youtube(query, max_results=10):
                         'thumbnail': entry.get('thumbnail', entry.get('thumbnails', [{}])[0].get('url', '')),
                         'channel': entry.get('uploader', entry.get('channel', 'Unknown')),
                         'channel_id': entry.get('channel_id', entry.get('uploader_id', '')),
-                        'duration': format_duration(entry.get('duration', 0)),
+                        'duration': invidious.fmt_dur(entry.get('duration', 0)),
                         'view_count': format_views(entry.get('view_count', 0)),
                         'url': f"https://www.youtube.com/watch?v={entry.get('id', '')}"
                     }
@@ -178,7 +190,7 @@ def search_youtube_with_offset(query, offset=0, max_results=10):
                         'thumbnail': entry.get('thumbnail', entry.get('thumbnails', [{}])[0].get('url', '')),
                         'channel': entry.get('uploader', entry.get('channel', 'Unknown')),
                         'channel_id': entry.get('channel_id', entry.get('uploader_id', '')),
-                        'duration': format_duration(entry.get('duration', 0)),
+                        'duration': invidious.fmt_dur(entry.get('duration', 0)),
                         'view_count': format_views(entry.get('view_count', 0)),
                         'url': f"https://www.youtube.com/watch?v={entry.get('id', '')}"
                     }
@@ -415,48 +427,63 @@ def get_trending_videos(max_results=15):
 
 @app.route('/api/trending')
 def trending():
-    """API endpoint to fetch trending videos — 3-tier fallback."""
-    source = get_data_source()
+    """
+    API endpoint for trending/home-page videos.
+    Supports ?offset=N for infinite scroll.
 
-    if source == 'ytdlp':
-        try:
-            videos = get_trending_videos(max_results=12)
-            if videos:
-                return jsonify(videos)
-        except Exception as e:
-            print(f"[yt-dlp] trending error: {e}")
-        # yt-dlp failed mid-flight, try invidious
-        source = 'invidious'
+    Server-side pool cache:
+      • On first call (offset=0 or cache stale) fetches TRENDING_POOL videos
+        via the 3-tier fallback and stores them for TRENDING_TTL seconds.
+      • Subsequent calls slice the cached pool — zero extra API calls.
+      • Returns [] when offset ≥ pool size (signals end-of-feed to JS).
+    """
+    global _trending_cache
+    offset = int(request.args.get('offset', 0))
+    now    = time.time()
 
-    if source == 'invidious':
-        videos = invidious.get_trending(max_results=12)
-        if videos:
-            return jsonify(videos)
-        # Invidious also failed
-        source = 'mock'
+    # Refresh the pool if stale or empty
+    if not _trending_cache['videos'] or now - _trending_cache['at'] >= TRENDING_TTL:
+        source = get_data_source()
+        videos = None
 
-    # Tier 3: static mock
-    return jsonify(mock_data.get_mock_trending())
+        if source == 'ytdlp':
+            try:
+                videos = get_trending_videos(max_results=TRENDING_POOL)
+            except Exception as e:
+                print(f"[yt-dlp] trending error: {e}")
+            if not videos:
+                source = 'invidious'
+
+        if source == 'invidious':
+            videos = invidious.get_trending(max_results=TRENDING_POOL)
+            if not videos:
+                source = 'mock'
+
+        if source == 'mock' or not videos:
+            videos = mock_data.get_mock_trending()
+
+        _trending_cache['videos'] = videos
+        _trending_cache['at']     = now
+        print(f"[Trending] Cache refreshed: {len(videos)} videos")
+
+    pool = _trending_cache['videos']
+    page = pool[offset : offset + TRENDING_PAGE]
+    return jsonify(page)
 
 
 @app.route('/api/autocomplete')
 def autocomplete():
     """
-    API endpoint for search autocomplete suggestions
+    API endpoint for search autocomplete — uses Google's YouTube suggestion
+    API (same source as the real YouTube search bar, near-instant).
     """
     query = request.args.get('q', '').strip()
-    
+
     if not query or len(query) < 2:
         return jsonify([])
-    
-    try:
-        # Use yt-dlp to get search suggestions
-        # We'll do a quick search and return video titles as suggestions
-        suggestions = get_search_suggestions(query)
-        return jsonify(suggestions)
-    except Exception as e:
-        print(f"Autocomplete error: {e}")
-        return jsonify([])
+
+    suggestions = get_search_suggestions(query)
+    return jsonify(suggestions)
 
 @app.route('/api/search-more')
 def search_more():
@@ -490,64 +517,44 @@ def search_more():
 
 def get_search_suggestions(query):
     """
-    Get search suggestions based on query
-    Returns a list of suggestion strings
+    Fetch YouTube search suggestions via Google's suggestion API.
+    Same data source the real YouTube search bar uses — responds in <100 ms.
+    Results are cached for 5 minutes to avoid redundant network calls.
     """
+    global _suggest_cache
+    query_lower = query.lower()
+
+    # Return cached result if still fresh
+    cached = _suggest_cache.get(query_lower)
+    if cached:
+        ts, results = cached
+        if time.time() - ts < SUGGEST_TTL:
+            return results
+
     try:
-        # Quick search for 5 results to generate suggestions
-        ydl_opts = {
-            'quiet': True,
-            'no_warnings': True,
-            'extract_flat': True,
-            'ignoreerrors': True,
-        }
-        
-        # Use ytsearch prefix
-        search_query = f"ytsearch5:{query}"
-        
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            result = ydl.extract_info(search_query, download=False)
-            
-            if not result or 'entries' not in result:
-                return []
-            
-            suggestions = []
-            seen = set()
-            
-            for entry in result['entries']:
-                if entry and entry.get('title'):
-                    title = entry['title']
-                    # Add the full title
-                    if title not in seen:
-                        suggestions.append(title)
-                        seen.add(title)
-                    
-                    # Also add the channel name as a suggestion
-                    channel = entry.get('uploader', entry.get('channel'))
-                    if channel and channel not in seen and len(suggestions) < 8:
-                        suggestions.append(channel)
-                        seen.add(channel)
-            
-            return suggestions[:8]  # Limit to 8 suggestions
-    
+        # Google's YouTube suggestion endpoint (same one the real YT bar uses)
+        params = urllib.parse.urlencode({
+            'client': 'firefox',
+            'ds':     'yt',
+            'q':      query,
+        })
+        url = f"https://suggestqueries.google.com/complete/search?{params}"
+        req = urllib.request.Request(
+            url,
+            headers={'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json'}
+        )
+        with urllib.request.urlopen(req, timeout=3) as resp:
+            data = json.loads(resp.read().decode())
+            # Response format: ["query", ["suggestion1", "suggestion2", ...]]
+            suggestions = data[1][:8] if len(data) > 1 else []
+
+        _suggest_cache[query_lower] = (time.time(), suggestions)
+        return suggestions
+
     except Exception as e:
-        print(f"Error getting suggestions: {e}")
+        print(f"[Autocomplete] Suggestion API error: {e}")
         return []
 
-
-def format_duration(seconds):
-    """Convert seconds to MM:SS or HH:MM:SS format"""
-    if not seconds:
-        return "0:00"
-    
-    hours = int(seconds // 3600)
-    minutes = int((seconds % 3600) // 60)
-    secs = int(seconds % 60)
-    
-    if hours > 0:
-        return f"{hours}:{minutes:02d}:{secs:02d}"
-    else:
-        return f"{minutes}:{secs:02d}"
 
 def format_views(count):
     """Format view count to readable format (e.g., 1.2M, 45K)"""
@@ -795,7 +802,7 @@ def format_date(date_str):
             return f"{month_name} {int(day)}, {year}"
             
         return "Unknown date"
-    except:
+    except Exception:
         return "Unknown date"
 
 def extract_comments(comments_data):

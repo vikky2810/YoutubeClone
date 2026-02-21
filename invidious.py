@@ -119,9 +119,10 @@ def _try_instances(instances, path, params=None, cache_attr=None):
 # Helpers — format
 # ─────────────────────────────────────────────────────────────────────
 
-def _fmt_dur(seconds):
+def fmt_dur(seconds):
+    """Convert seconds to MM:SS or HH:MM:SS string. Single source of truth shared with index.py."""
     if not seconds:
-        return ""
+        return "0:00"
     s = int(seconds)
     h, rem = divmod(s, 3600)
     m, sec = divmod(rem, 60)
@@ -162,7 +163,7 @@ def _piped_video(entry):
         "channel":     entry.get("uploaderName", "Unknown"),
         "channel_id":  _extract_id(entry.get("uploaderUrl", "")),
         "thumbnail":   entry.get("thumbnail") or _thumb(vid_id),
-        "duration":    _fmt_dur(entry.get("duration", 0)),
+        "duration":    fmt_dur(entry.get("duration", 0)),
         "view_count":  _fmt_views(entry.get("views", 0)),
         "upload_date": "",
     }
@@ -225,7 +226,7 @@ def _piped_video_info(video_id):
         "channel_url":      data.get("uploaderUrl", "#"),
         "channel_thumbnail":data.get("uploaderAvatar", ""),
         "thumbnail":        data.get("thumbnailUrl") or _thumb(video_id),
-        "duration":         _fmt_dur(data.get("duration", 0)),
+        "duration":         fmt_dur(data.get("duration", 0)),
         "view_count":       _fmt_views(data.get("views", 0)),
         "like_count":       _fmt_views(data.get("likes", 0)).replace(" views", ""),
         "upload_date":      data.get("uploadDate", ""),
@@ -247,7 +248,7 @@ def _inv_video(entry):
         "channel":     entry.get("author", "Unknown"),
         "channel_id":  entry.get("authorId", ""),
         "thumbnail":   _thumb(vid_id),
-        "duration":    _fmt_dur(entry.get("lengthSeconds", 0)),
+        "duration":    fmt_dur(entry.get("lengthSeconds", 0)),
         "view_count":  _fmt_views(entry.get("viewCount", 0)),
         "upload_date": "",
     }
@@ -309,7 +310,7 @@ def _inv_video_info(video_id):
         "channel_url":      f"/channel/{data.get('authorId','')}",
         "channel_thumbnail":ch_thumbs[-1]["url"] if ch_thumbs else "",
         "thumbnail":        _thumb(vid_id),
-        "duration":         _fmt_dur(data.get("lengthSeconds", 0)),
+        "duration":         fmt_dur(data.get("lengthSeconds", 0)),
         "view_count":       _fmt_views(data.get("viewCount", 0)),
         "like_count":       _fmt_views(data.get("likeCount", 0)).replace(" views", ""),
         "upload_date":      "",
