@@ -195,8 +195,6 @@ def search_youtube_with_offset(query, offset=0, max_results=10):
         traceback.print_exc()
         return []
 
-        return []
-
 def get_channel_videos(channel_id):
     """
     Get videos from a specific channel
@@ -248,9 +246,6 @@ def get_channel_videos(channel_id):
                 channel_info['thumbnail'] = result.get('thumbnail')
                 
             entries = result.get('entries', [])
-            if not entries:
-                return [], channel_info
-            
             if not entries:
                 return [], channel_info
             
@@ -397,35 +392,8 @@ def get_trending_videos(max_results=15):
     """
     print("Fetching niche trending videos...")
 
-    NICHE_TOPICS = [
-        # Core coding
-        "programming tutorial project build 2024",
-        "debugging error fixing coding tips",
-        "data structures algorithms explained",
-        "system design backend architecture explained",
-        # College-relevant
-        "final year college project walkthrough",
-        "open source github project review",
-        # Applied AI
-        "AI automation practical project tutorial",
-        "machine learning project from scratch",
-        # Tools & career
-        "developer tools productivity setup",
-        "realistic tech career guidance developer",
-        # Long-form learning
-        "full course programming beginner to advanced",
-        "software engineering fundamentals deep dive",
-        # Hot sub-topics
-        "REST API backend project tutorial",
-        "database design SQL NoSQL explained",
-        "clean code refactoring best practices",
-        "git github workflow for developers",
-        "docker containerization tutorial beginner",
-        "competitive programming problem solving",
-    ]
-
-    # Pick 3 different random topics
-    selected = random.sample(NICHE_TOPICS, k=3)
+    # Re-use the single source of truth defined in invidious.py
+    selected = random.sample(invidious.NICHE_TOPICS, k=3)
     per_topic = max(5, max_results // 3)
 
     all_videos = []

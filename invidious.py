@@ -1,13 +1,11 @@
 """
-invidious.py — Dynamic YouTube data via Piped & Invidious public APIs.
+invidious.py — Dynamic YouTube data via Invidious public APIs.
 
 Priority order:
-  1. Piped API (pipedapi.kavin.rocks and mirrors) — modern, more reliable
-  2. Invidious API (inv.tux.pizza and mirrors)    — fallback
-  3. Returns None  →  caller falls back to static mock
+  1. Invidious API (iv.melmac.space and mirrors) — confirmed working
+  2. Returns None  →  caller falls back to static mock
 
 API docs:
-  Piped:     https://docs.piped.video/docs/api-documentation/
   Invidious: https://docs.invidious.io/api/
 """
 
@@ -15,36 +13,27 @@ import json
 import socket
 import urllib.request
 import urllib.parse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
-TIMEOUT = 4   # seconds per attempt — fail fast, move to next
+TIMEOUT = 3   # seconds per attempt — fail fast, move to next
 
-
-# ─────────────────────────────────────────────────────────────────────
-# Piped instances  (ordered by reliability — 2026)
-# ─────────────────────────────────────────────────────────────────────
-PIPED_INSTANCES = [
-    "https://api.piped.projectsegfau.lt",
-    "https://pipedapi.moomoo.me",
-    "https://piped-api.garudalinux.org",
-    "https://api.piped.privacydev.net",
-    "https://pipedapi.kavin.rocks",    # 521 on some networks, keep as last resort
-]
 
 # ─────────────────────────────────────────────────────────────────────
-# Invidious instances  — iv.melmac.space confirmed working 2026-02-21
+# Piped instances — all confirmed dead on most networks (2026-02-21)
+# Left empty so the Piped tier is skipped instantly with no retries.
+# ─────────────────────────────────────────────────────────────────────
+PIPED_INSTANCES = []
+
+# ─────────────────────────────────────────────────────────────────────
+# Invidious instances — only confirmed-working hosts (2026-02-21)
 # ─────────────────────────────────────────────────────────────────────
 INVIDIOUS_INSTANCES = [
     "https://iv.melmac.space",          # ✅ confirmed working
-    "https://invidious.privacydev.net",
-    "https://y.com.sb",
-    "https://invidious.namazso.eu",
-    "https://invidious.fdn.fr",
-    "https://inv.tux.pizza",            # slow but sometimes works
-    "https://invidious.lunar.icu",
+    "https://invidious.fdn.fr",         # reliable EU backup
+    "https://inv.tux.pizza",            # fallback
 ]
 
-_piped_instance   = None   # cached working Piped instance
-_inv_instance     = None   # cached working Invidious instance
+_inv_instance = None   # cached working Invidious instance
 
 # ─────────────────────────────────────────────────────────────────────
 # Niche topic pool — used for home page "trending" on all tiers
@@ -180,7 +169,9 @@ def _piped_video(entry):
 
 
 def _piped_trending(max_results=12):
-    """Search niche dev topics via Piped instead of generic trending."""
+    """Piped instances are currently unavailable — skip immediately."""
+    if not PIPED_INSTANCES:
+        return None
     import random
     selected  = random.sample(NICHE_TOPICS, k=3)
     per_topic = max(5, max_results // 3)
@@ -263,21 +254,28 @@ def _inv_video(entry):
 
 
 def _inv_trending(max_results=12):
-    """Search niche dev topics via Invidious instead of generic trending."""
+    """Search niche dev topics via Invidious — topics fetched in parallel."""
     import random
     selected  = random.sample(NICHE_TOPICS, k=3)
     per_topic = max(5, max_results // 3)
-    all_videos, seen = [], set()
-    for topic in selected:
+
+    def _fetch_topic(topic):
         print(f"  [Invidious] trending topic: '{topic}'")
         _, data = _try_instances(INVIDIOUS_INSTANCES, "/api/v1/search",
                                  {"q": topic, "type": "video"}, "_inv_instance")
         if data and isinstance(data, list):
-            for v in data[:per_topic]:
-                vid = _inv_video(v)
+            return [_inv_video(v) for v in data[:per_topic] if v.get("videoId")]
+        return []
+
+    all_videos, seen = [], set()
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        futures = {pool.submit(_fetch_topic, t): t for t in selected}
+        for fut in as_completed(futures):
+            for vid in (fut.result() or []):
                 if vid["id"] and vid["id"] not in seen:
                     seen.add(vid["id"])
                     all_videos.append(vid)
+
     random.shuffle(all_videos)
     return all_videos[:max_results] or None
 
