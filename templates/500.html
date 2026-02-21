@@ -1,16 +1,181 @@
 {% extends 'base.html' %}
 
-{% block title %}Server Error - ViewTube{% endblock %}
-
-{% block header_search %}{% endblock %}
+{% block title %}500 – Server Error · ViewTube{% endblock %}
+{% block description %}Something went wrong on our end. Head back to ViewTube.{% endblock %}
 
 {% block main_content %}
+<style>
+    .error-page {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: calc(100vh - 120px);
+        text-align: center;
+        padding: 40px 24px;
+        gap: 24px;
+    }
+
+    .error-illustration svg {
+        animation: shake 2.5s ease-in-out infinite;
+        filter: drop-shadow(0 0 24px rgba(255, 160, 0, 0.3));
+    }
+
+    @keyframes shake {
+
+        0%,
+        100% {
+            transform: rotate(0deg);
+        }
+
+        10%,
+        30%,
+        50% {
+            transform: rotate(-4deg);
+        }
+
+        20%,
+        40% {
+            transform: rotate(4deg);
+        }
+
+        60%,
+        80% {
+            transform: translateY(0);
+        }
+
+        70% {
+            transform: translateY(-8px);
+        }
+    }
+
+    .error-code {
+        font-size: 100px;
+        font-weight: 900;
+        line-height: 1;
+        letter-spacing: -4px;
+        background: linear-gradient(135deg, #ffaa00, #ff6600, #ff4400);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .error-title {
+        font-size: 26px;
+        font-weight: 600;
+        color: #f1f1f1;
+        margin: 0;
+    }
+
+    .error-desc {
+        font-size: 15px;
+        color: #aaaaaa;
+        max-width: 420px;
+        line-height: 1.6;
+        margin: 0;
+    }
+
+    .error-actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-top: 8px;
+    }
+
+    .error-btn-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #fff;
+        color: #000;
+        text-decoration: none;
+        padding: 10px 24px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 14px;
+        transition: background 0.2s, transform 0.15s;
+    }
+
+    .error-btn-primary:hover {
+        background: #e0e0e0;
+        transform: translateY(-1px);
+    }
+
+    .error-btn-secondary {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: transparent;
+        color: #f1f1f1;
+        text-decoration: none;
+        padding: 10px 24px;
+        border-radius: 20px;
+        border: 1px solid #555;
+        font-weight: 500;
+        font-size: 14px;
+        cursor: pointer;
+        transition: background 0.2s, transform 0.15s;
+    }
+
+    .error-btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.08);
+        transform: translateY(-1px);
+    }
+</style>
+
 <div class="error-page">
-    <div class="error-content">
-        <div class="error-icon">😵</div>
-        <h1>500 - Server Error</h1>
-        <p>Something went wrong on our end. Please try again later.</p>
-        <a href="{{ url_for('home') }}" class="back-home-button">Go Back Home</a>
+    <!-- Animated SVG illustration -->
+    <div class="error-illustration">
+        <svg viewBox="0 0 180 180" width="180" height="180" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- TV body -->
+            <rect x="20" y="30" width="140" height="100" rx="12" fill="#1a1a1a" stroke="#303030" stroke-width="2" />
+            <!-- Screen (orange tint for error) -->
+            <rect x="34" y="44" width="112" height="72" rx="6" fill="#1a0f00" />
+            <!-- Lightning bolt on screen -->
+            <polygon points="100,50 80,82 94,82 80,110 110,75 94,75" fill="#ff8800" opacity="0.9" />
+            <!-- Stand -->
+            <rect x="70" y="130" width="40" height="10" rx="2" fill="#1a1a1a" stroke="#303030" stroke-width="2" />
+            <rect x="55" y="140" width="70" height="8" rx="4" fill="#1a1a1a" stroke="#303030" stroke-width="2" />
+            <!-- Amber warning light -->
+            <circle cx="148" cy="48" r="5" fill="#ff8800">
+                <animate attributeName="opacity" values="1;0.1;1" dur="0.8s" repeatCount="indefinite" />
+            </circle>
+            <!-- Smoke wisps -->
+            <path d="M50 30 Q52 20 50 10" stroke="#555" stroke-width="2" stroke-linecap="round" fill="none"
+                opacity="0.6">
+                <animate attributeName="d" values="M50 30 Q52 20 50 10;M50 30 Q48 18 52 8;M50 30 Q52 20 50 10" dur="2s"
+                    repeatCount="indefinite" />
+            </path>
+            <path d="M60 28 Q62 18 58 8" stroke="#555" stroke-width="2" stroke-linecap="round" fill="none"
+                opacity="0.4">
+                <animate attributeName="d" values="M60 28 Q62 18 58 8;M60 28 Q58 16 62 6;M60 28 Q62 18 58 8" dur="2.3s"
+                    repeatCount="indefinite" />
+            </path>
+        </svg>
+    </div>
+
+    <div class="error-code">500</div>
+    <h1 class="error-title">Something went wrong</h1>
+    <p class="error-desc">
+        Our server hit a snag. This is on us, not you.<br>
+        Try refreshing, or head back to the home page.
+    </p>
+
+    <div class="error-actions">
+        <button onclick="location.reload()" class="error-btn-secondary">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                <path
+                    d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
+            </svg>
+            Retry
+        </button>
+        <a href="{{ url_for('home') }}" class="error-btn-primary">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
+            </svg>
+            Go Home
+        </a>
     </div>
 </div>
 {% endblock %}

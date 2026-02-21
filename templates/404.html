@@ -1,16 +1,176 @@
 {% extends 'base.html' %}
 
-{% block title %}Page Not Found - ViewTube{% endblock %}
-
-{% block header_search %}{% endblock %}
+{% block title %}404 – Page Not Found · ViewTube{% endblock %}
+{% block description %}This page doesn't exist. Head back to ViewTube and find something great to watch.{% endblock %}
 
 {% block main_content %}
+<style>
+    .error-page {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: calc(100vh - 120px);
+        text-align: center;
+        padding: 40px 24px;
+        gap: 24px;
+    }
+
+    .error-illustration {
+        position: relative;
+        width: 180px;
+        height: 180px;
+    }
+
+    .error-illustration svg {
+        filter: drop-shadow(0 0 24px rgba(255, 0, 0, 0.3));
+        animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+
+        0%,
+        100% {
+            transform: translateY(0);
+        }
+
+        50% {
+            transform: translateY(-12px);
+        }
+    }
+
+    .error-code {
+        font-size: 100px;
+        font-weight: 900;
+        line-height: 1;
+        letter-spacing: -4px;
+        background: linear-gradient(135deg, #ff4444, #ff0000, #cc0000);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .error-title {
+        font-size: 26px;
+        font-weight: 600;
+        color: #f1f1f1;
+        margin: 0;
+    }
+
+    .error-desc {
+        font-size: 15px;
+        color: #aaaaaa;
+        max-width: 420px;
+        line-height: 1.6;
+        margin: 0;
+    }
+
+    .error-actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-top: 8px;
+    }
+
+    .error-btn-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #fff;
+        color: #000;
+        text-decoration: none;
+        padding: 10px 24px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 14px;
+        transition: background 0.2s, transform 0.15s;
+    }
+
+    .error-btn-primary:hover {
+        background: #e0e0e0;
+        transform: translateY(-1px);
+    }
+
+    .error-search-form {
+        display: flex;
+        gap: 0;
+        background: #121212;
+        border: 1px solid #303030;
+        border-radius: 40px;
+        overflow: hidden;
+        width: 100%;
+        max-width: 420px;
+    }
+
+    .error-search-input {
+        flex: 1;
+        background: transparent;
+        border: none;
+        padding: 10px 20px;
+        color: #f1f1f1;
+        font-size: 15px;
+        outline: none;
+    }
+
+    .error-search-btn {
+        background: #222;
+        border: none;
+        border-left: 1px solid #303030;
+        padding: 0 20px;
+        color: #f1f1f1;
+        cursor: pointer;
+        font-size: 18px;
+        transition: background 0.2s;
+    }
+
+    .error-search-btn:hover {
+        background: #333;
+    }
+</style>
+
 <div class="error-page">
-    <div class="error-content">
-        <div class="error-icon">😕</div>
-        <h1>404 - Page Not Found</h1>
-        <p>The page you are looking for does not exist or has been moved.</p>
-        <a href="{{ url_for('home') }}" class="back-home-button">Go Back Home</a>
+    <!-- Animated SVG illustration -->
+    <div class="error-illustration">
+        <svg viewBox="0 0 180 180" width="180" height="180" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- TV body -->
+            <rect x="20" y="30" width="140" height="100" rx="12" fill="#1a1a1a" stroke="#303030" stroke-width="2" />
+            <!-- Screen -->
+            <rect x="34" y="44" width="112" height="72" rx="6" fill="#0f0f0f" />
+            <!-- Question marks on screen -->
+            <text x="90" y="96" font-size="40" font-weight="900" fill="#333" text-anchor="middle"
+                font-family="Roboto,Arial">?</text>
+            <!-- Stand -->
+            <rect x="70" y="130" width="40" height="10" rx="2" fill="#1a1a1a" stroke="#303030" stroke-width="2" />
+            <rect x="55" y="140" width="70" height="8" rx="4" fill="#1a1a1a" stroke="#303030" stroke-width="2" />
+            <!-- Red dot / signal indicator -->
+            <circle cx="148" cy="48" r="5" fill="#ff0000">
+                <animate attributeName="opacity" values="1;0.2;1" dur="1.5s" repeatCount="indefinite" />
+            </circle>
+        </svg>
+    </div>
+
+    <div class="error-code">404</div>
+    <h1 class="error-title">Page not found</h1>
+    <p class="error-desc">
+        This page has gone missing — like a video that got taken down.<br>
+        Try searching for what you were looking for.
+    </p>
+
+    <!-- Quick search -->
+    <form action="/search" method="get" class="error-search-form">
+        <input class="error-search-input" type="text" name="q" placeholder="Search ViewTube…" autocomplete="off"
+            autofocus>
+        <button class="error-search-btn" type="submit" aria-label="Search">🔍</button>
+    </form>
+
+    <div class="error-actions">
+        <a href="{{ url_for('home') }}" class="error-btn-primary">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
+            </svg>
+            Go Home
+        </a>
     </div>
 </div>
 {% endblock %}
