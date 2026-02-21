@@ -45,25 +45,45 @@
 {% if videos %}
 <div class="yt-results-list" id="results-list">
     {% for video in videos %}
-    <article class="yt-result-card">
-        <a href="/watch?v={{ video.id }}" class="yt-result-card-link" aria-label="{{ video.title }}">
+    <article class="yt-result-card {% if video.type == 'playlist' %}is-playlist{% endif %}">
+        <a href="{% if video.type == 'playlist' %}/playlist/{{ video.id }}{% else %}/watch?v={{ video.id }}{% endif %}"
+            class="yt-result-card-link" aria-label="{{ video.title }}">
+
             <!-- Thumbnail -->
-            <div class="yt-result-thumbnail-wrapper">
+            <div class="yt-result-thumbnail-wrapper {% if video.type == 'playlist' %}is-playlist{% endif %}">
                 <img src="{{ video.thumbnail }}" alt="{{ video.title }}" class="yt-result-thumbnail" loading="lazy">
-                {% if video.duration %}
+
+                {% if video.type == 'playlist' %}
+                <div class="yt-pl-overlay">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                        <path d="M22 7H2v2h20V7zm-2 4H2v2h18v-2zm-6 4H2v2h12v-2z" />
+                    </svg>
+                    <span>{{ video.video_count }}</span>
+                </div>
+                {% elif video.duration %}
                 <span class="yt-duration">{{ video.duration }}</span>
                 {% endif %}
             </div>
+
             <!-- Info -->
             <div class="yt-result-info">
                 <h3 class="yt-result-title" title="{{ video.title }}">{{ video.title }}</h3>
+
                 <div class="yt-result-meta">
+                    {% if video.type == 'playlist' %}
+                    <span class="yt-result-channel-name">{{ video.channel }}</span>
+                    <span class="yt-result-dot">•</span>
+                    <span class="yt-result-views">Playlist</span>
+                    {% else %}
                     <span class="yt-result-views">{{ video.view_count }}</span>
                     {% if video.upload_date %}
                     <span class="yt-result-dot">•</span>
                     <span class="yt-result-date">{{ video.upload_date }}</span>
                     {% endif %}
+                    {% endif %}
                 </div>
+
+                {% if video.type != 'playlist' %}
                 <div class="yt-result-channel">
                     <div class="yt-result-channel-icon">
                         {% if video.channel_id %}
@@ -81,9 +101,20 @@
                             d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
                     </svg>
                 </div>
+                {% endif %}
+
+                {% if video.type == 'playlist' and video.videos %}
+                <div class="yt-pl-preview-list">
+                    {% for pvid in video.videos[:2] %}
+                    <div class="yt-pl-preview-item">{{ pvid.title }}</div>
+                    {% endfor %}
+                    <div class="yt-pl-view-all">View full playlist</div>
+                </div>
+                {% else %}
                 <p class="yt-result-description">
                     Search result for "{{ query }}" — Watch "{{ video.title }}" and more related videos on ViewTube.
                 </p>
+                {% endif %}
             </div>
         </a>
     </article>

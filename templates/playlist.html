@@ -1,0 +1,182 @@
+{% extends 'base.html' %}
+
+{% block description %}{{ playlist.title }} - Playlist on ViewTube{% endblock %}
+{% block title %}{{ playlist.title }} - ViewTube{% endblock %}
+{% block body_class %}playlist-page{% endblock %}
+
+{% block header_search %}
+<form action="/search" method="get" class="yt-search-form" id="yt-search-form" role="search">
+    <div class="yt-search-wrapper">
+        <div class="yt-search-box">
+            <input type="text" name="q" class="yt-search-input" id="main-search-input" placeholder="Search"
+                autocomplete="off" aria-label="Search">
+            <button type="submit" class="yt-search-btn" aria-label="Search">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                    <path
+                        d="M20.87 20.17l-5.59-5.59C16.35 13.35 17 11.75 17 10c0-3.87-3.13-7-7-7s-7 3.13-7 7 3.13 7 7 7c1.75 0 3.35-.65 4.58-1.71l5.59 5.59.7-.71zM10 16c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z" />
+                </svg>
+            </button>
+        </div>
+        <button type="button" class="yt-mic-btn" aria-label="Search with voice">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                <path
+                    d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z" />
+            </svg>
+        </button>
+    </div>
+</form>
+{% endblock %}
+
+{% block content %}
+<div class="pl-layout">
+
+    <!-- Left: Playlist Header Card (sticky) -->
+    <aside class="pl-sidebar">
+        <div class="pl-header-card">
+            <div class="pl-thumbnail-wrap">
+                {% if playlist.thumbnail %}
+                <img src="{{ playlist.thumbnail }}" alt="{{ playlist.title }}" class="pl-thumbnail" loading="lazy">
+                {% else %}
+                <div class="pl-thumbnail-placeholder">
+                    <svg viewBox="0 0 24 24" width="48" height="48" fill="currentColor" opacity="0.5">
+                        <path
+                            d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z" />
+                    </svg>
+                </div>
+                {% endif %}
+                <div class="pl-play-overlay">
+                    {% if videos %}
+                    <a href="/watch?v={{ videos[0].id }}&list={{ playlist_id }}" class="pl-play-all-btn"
+                        id="pl-play-all">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                            <path d="M8 5v14l11-7z" />
+                        </svg>
+                        Play all
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="pl-meta">
+                <h1 class="pl-title">{{ playlist.title }}</h1>
+
+                {% if playlist.channel %}
+                <div class="pl-channel-row">
+                    {% if playlist.channel_id %}
+                    <a href="/channel/{{ playlist.channel_id }}?name={{ playlist.channel }}" class="pl-channel-link">
+                        {{ playlist.channel }}
+                    </a>
+                    {% else %}
+                    <span class="pl-channel-link">{{ playlist.channel }}</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <div class="pl-stats-row">
+                    <span class="pl-stat">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                            <path
+                                d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z" />
+                        </svg>
+                        {{ playlist.video_count or videos|length }} videos
+                    </span>
+                </div>
+
+                {% if playlist.description %}
+                <div class="pl-description" id="pl-description">
+                    <p class="pl-desc-text" id="pl-desc-text">{{ playlist.description }}</p>
+                    <button class="pl-desc-toggle" id="pl-desc-toggle">Show more</button>
+                </div>
+                {% endif %}
+
+                <div class="pl-action-row">
+                    {% if videos %}
+                    <a href="/watch?v={{ videos[0].id }}&list={{ playlist_id }}" class="pl-btn pl-btn-primary"
+                        id="pl-play-all-btn">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                            <path d="M8 5v14l11-7z" />
+                        </svg>
+                        Play all
+                    </a>
+                    {% endif %}
+                    <button class="pl-btn pl-btn-secondary" id="pl-shuffle-btn">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                            <path
+                                d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z" />
+                        </svg>
+                        Shuffle
+                    </button>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Right: Video List -->
+    <section class="pl-video-list" aria-label="Playlist videos">
+        {% if videos %}
+        {% for video in videos %}
+        <a href="/watch?v={{ video.id }}&list={{ playlist_id }}" class="pl-video-row" id="pl-video-{{ loop.index }}">
+            <span class="pl-video-index">{{ loop.index }}</span>
+            <div class="pl-video-thumb-wrap">
+                <img src="{{ video.thumbnail }}" alt="{{ video.title }}" class="pl-video-thumb" loading="lazy">
+                {% if video.duration %}
+                <span class="pl-video-duration">{{ video.duration }}</span>
+                {% endif %}
+            </div>
+            <div class="pl-video-info">
+                <p class="pl-video-title">{{ video.title }}</p>
+                <p class="pl-video-channel">{{ video.channel }}</p>
+                {% if video.view_count and video.view_count != '0 views' %}
+                <p class="pl-video-meta">{{ video.view_count }}{% if video.upload_date and video.upload_date != 'Unknown
+                    date' %} · {{ video.upload_date }}{% endif %}</p>
+                {% endif %}
+            </div>
+        </a>
+        {% endfor %}
+        {% else %}
+        <div class="pl-empty">
+            <svg viewBox="0 0 24 24" width="64" height="64" fill="currentColor" opacity="0.3">
+                <path
+                    d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z" />
+            </svg>
+            <p>This playlist has no videos or could not be loaded.</p>
+            <a href="/" class="pl-btn pl-btn-primary" style="margin-top:16px; display:inline-flex;">Go Home</a>
+        </div>
+        {% endif %}
+    </section>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Description expand/collapse
+    const descText = document.getElementById('pl-desc-text');
+    const descBtn = document.getElementById('pl-desc-toggle');
+    let descOpen = false;
+
+    if (descBtn && descText) {
+        // Only show toggle if text overflows
+        if (descText.scrollHeight <= descText.clientHeight + 2) {
+            descBtn.style.display = 'none';
+        }
+        descBtn.addEventListener('click', () => {
+            descOpen = !descOpen;
+            descText.classList.toggle('expanded', descOpen);
+            descBtn.textContent = descOpen ? 'Show less' : 'Show more';
+        });
+    }
+
+    // Shuffle: pick a random video from the playlist and navigate to it
+    const shuffleBtn = document.getElementById('pl-shuffle-btn');
+    const playlistId = '{{ playlist_id }}';
+    const videoIds = [{% for v in videos %}'{{ v.id }}'{% if not loop.last %}, {% endif %} {% endfor %}];
+
+    if (shuffleBtn && videoIds.length > 0) {
+        shuffleBtn.addEventListener('click', () => {
+            const randomId = videoIds[Math.floor(Math.random() * videoIds.length)];
+            window.location.href = `/watch?v=${randomId}&list=${playlistId}`;
+        });
+    }
+</script>
+{% endblock %}

@@ -129,21 +129,38 @@ def search_youtube(query, max_results=10):
             videos = []
             for entry in result['entries']:
                 if entry:
-                    # Extract video data
-                    video = {
-                        'id': entry.get('id', ''),
-                        'title': entry.get('title', 'Untitled'),
-                        'thumbnail': entry.get('thumbnail', entry.get('thumbnails', [{}])[0].get('url', '')),
-                        'channel': entry.get('uploader', entry.get('channel', 'Unknown')),
-                        'channel_id': entry.get('channel_id', entry.get('uploader_id', '')),
-                        'duration': invidious.fmt_dur(entry.get('duration', 0)),
-                        'view_count': format_views(entry.get('view_count', 0)),
-                        'url': f"https://www.youtube.com/watch?v={entry.get('id', '')}"
-                    }
-                    videos.append(video)
-                    print(f"Added video: {video['title']}")  # Debug
+                    # Determine type: 'playlist' or 'video'
+                    entry_type = entry.get('_type')
+                    is_playlist = entry_type == 'playlist' or 'playlist' in entry.get('url', '').lower()
+                    
+                    if is_playlist:
+                        item = {
+                            'type':        'playlist',
+                            'id':          entry.get('id', ''),
+                            'title':       entry.get('title', 'Untitled Playlist'),
+                            'thumbnail':   entry.get('thumbnail', entry.get('thumbnails', [{}])[0].get('url', '')),
+                            'channel':     entry.get('uploader', entry.get('channel', 'Unknown')),
+                            'channel_id':  entry.get('channel_id', entry.get('uploader_id', '')),
+                            'video_count': entry.get('playlist_count', entry.get('video_count', 0)),
+                            'view_count':  'Playlist',
+                            'upload_date': 'Playlist',
+                            'videos':      [] # We don't have sub-videos in flat search usually
+                        }
+                    else:
+                        item = {
+                            'type':        'video',
+                            'id':          entry.get('id', ''),
+                            'title':       entry.get('title', 'Untitled'),
+                            'thumbnail':   entry.get('thumbnail', entry.get('thumbnails', [{}])[0].get('url', '')),
+                            'channel':     entry.get('uploader', entry.get('channel', 'Unknown')),
+                            'channel_id':  entry.get('channel_id', entry.get('uploader_id', '')),
+                            'duration':    invidious.fmt_dur(entry.get('duration', 0)),
+                            'view_count':  format_views(entry.get('view_count', 0)),
+                            'url':         f"https://www.youtube.com/watch?v={entry.get('id', '')}"
+                        }
+                    videos.append(item)
+                    print(f"Added {item['type']}: {item['title']}")
             
-            print(f"Total videos found: {len(videos)}")  # Debug
             return videos
     
     except Exception as e:
@@ -184,17 +201,36 @@ def search_youtube_with_offset(query, offset=0, max_results=10):
             videos = []
             for entry in result['entries']:
                 if entry:
-                    video = {
-                        'id': entry.get('id', ''),
-                        'title': entry.get('title', 'Untitled'),
-                        'thumbnail': entry.get('thumbnail', entry.get('thumbnails', [{}])[0].get('url', '')),
-                        'channel': entry.get('uploader', entry.get('channel', 'Unknown')),
-                        'channel_id': entry.get('channel_id', entry.get('uploader_id', '')),
-                        'duration': invidious.fmt_dur(entry.get('duration', 0)),
-                        'view_count': format_views(entry.get('view_count', 0)),
-                        'url': f"https://www.youtube.com/watch?v={entry.get('id', '')}"
-                    }
-                    videos.append(video)
+                    # Determine type: 'playlist' or 'video'
+                    entry_type = entry.get('_type')
+                    is_playlist = entry_type == 'playlist' or 'playlist' in entry.get('url', '').lower()
+                    
+                    if is_playlist:
+                        item = {
+                            'type':        'playlist',
+                            'id':          entry.get('id', ''),
+                            'title':       entry.get('title', 'Untitled Playlist'),
+                            'thumbnail':   entry.get('thumbnail', entry.get('thumbnails', [{}])[0].get('url', '')),
+                            'channel':     entry.get('uploader', entry.get('channel', 'Unknown')),
+                            'channel_id':  entry.get('channel_id', entry.get('uploader_id', '')),
+                            'video_count': entry.get('playlist_count', entry.get('video_count', 0)),
+                            'view_count':  'Playlist',
+                            'upload_date': 'Playlist',
+                            'videos':      [] # We don't have sub-videos in flat search usually
+                        }
+                    else:
+                        item = {
+                            'type':        'video',
+                            'id':          entry.get('id', ''),
+                            'title':       entry.get('title', 'Untitled'),
+                            'thumbnail':   entry.get('thumbnail', entry.get('thumbnails', [{}])[0].get('url', '')),
+                            'channel':     entry.get('uploader', entry.get('channel', 'Unknown')),
+                            'channel_id':  entry.get('channel_id', entry.get('uploader_id', '')),
+                            'duration':    invidious.fmt_dur(entry.get('duration', 0)),
+                            'view_count':  format_views(entry.get('view_count', 0)),
+                            'url':         f"https://www.youtube.com/watch?v={entry.get('id', '')}"
+                        }
+                    videos.append(item)
             
             # Return only the slice we need (from offset to offset+max_results)
             paginated_videos = videos[offset:offset + max_results]
@@ -727,6 +763,112 @@ def channel(channel_id):
                            channel_thumbnail=channel_info.get('thumbnail', ''),
                            videos=videos)
 
+
+
+def get_playlist_info(playlist_id):
+    """
+    Fetch playlist metadata and video list using yt-dlp.
+    Returns tuple (videos, playlist_info).
+    """
+    print(f"Fetching playlist: {playlist_id}")
+    try:
+        ydl_opts = {
+            'quiet': True,
+            'no_warnings': True,
+            'extract_flat': True,
+            'ignoreerrors': True,
+            'playlistend': 50,
+        }
+        url = f"https://www.youtube.com/playlist?list={playlist_id}"
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            result = ydl.extract_info(url, download=False)
+            if not result:
+                return [], {}
+
+            playlist_info = {
+                'id':          playlist_id,
+                'title':       result.get('title', 'Untitled Playlist'),
+                'description': result.get('description', ''),
+                'channel':     result.get('uploader', result.get('channel', 'Unknown')),
+                'channel_id':  result.get('channel_id', result.get('uploader_id', '')),
+                'thumbnail':   result.get('thumbnail', ''),
+                'video_count': result.get('playlist_count', 0),
+            }
+
+            videos = []
+            for entry in (result.get('entries') or []):
+                if not entry:
+                    continue
+                vid_id = entry.get('id', '')
+                if not vid_id:
+                    continue
+                thumb = entry.get('thumbnail') or ''
+                if not thumb and entry.get('thumbnails'):
+                    thumb = entry['thumbnails'][0].get('url', '')
+                if not thumb:
+                    thumb = f"https://i.ytimg.com/vi/{vid_id}/hqdefault.jpg"
+                videos.append({
+                    'id':          vid_id,
+                    'title':       entry.get('title', 'Untitled'),
+                    'channel':     entry.get('uploader', entry.get('channel', playlist_info['channel'])),
+                    'channel_id':  entry.get('channel_id', entry.get('uploader_id', playlist_info['channel_id'])),
+                    'thumbnail':   thumb,
+                    'duration':    invidious.fmt_dur(entry.get('duration', 0)),
+                    'view_count':  format_views(entry.get('view_count', 0)),
+                    'upload_date': format_date(entry.get('upload_date', '')),
+                    'url':         f"https://www.youtube.com/watch?v={vid_id}",
+                })
+
+            # Fill thumbnail from first video if missing
+            if not playlist_info['thumbnail'] and videos:
+                playlist_info['thumbnail'] = videos[0]['thumbnail']
+            if not playlist_info['video_count']:
+                playlist_info['video_count'] = len(videos)
+
+            print(f"Playlist '{playlist_info['title']}': {len(videos)} videos")
+            return videos, playlist_info
+
+    except Exception as e:
+        print(f"Error fetching playlist: {e}")
+        import traceback
+        traceback.print_exc()
+        return [], {}
+
+
+@app.route('/playlist/<playlist_id>')
+def playlist(playlist_id):
+    """Playlist page — 3-tier fallback."""
+    if not playlist_id:
+        return redirect(url_for('home'))
+
+    source = get_data_source()
+
+    if source == 'ytdlp':
+        try:
+            videos, playlist_info = get_playlist_info(playlist_id)
+            if videos:
+                return render_template('playlist.html',
+                                       playlist_id=playlist_id,
+                                       playlist=playlist_info,
+                                       videos=videos)
+        except Exception as e:
+            print(f"[yt-dlp] playlist error: {e}")
+        source = 'invidious'
+
+    if source == 'invidious':
+        videos, playlist_info = invidious.get_playlist(playlist_id)
+        if videos:
+            return render_template('playlist.html',
+                                   playlist_id=playlist_id,
+                                   playlist=playlist_info,
+                                   videos=videos)
+        source = 'mock'
+
+    videos, playlist_info = mock_data.get_mock_playlist(playlist_id)
+    return render_template('playlist.html',
+                           playlist_id=playlist_id,
+                           playlist=playlist_info,
+                           videos=videos)
 
 
 def get_video_info(video_id):

@@ -145,14 +145,26 @@ endblock %}
 
         // ─── Video card renderer ───────────────────────────────────────
         function makeCard(video) {
+            const isPlaylist = video.type === 'playlist';
             const article = document.createElement('article');
-            article.className = 'yt-video-card';
+            article.className = `yt-video-card ${isPlaylist ? 'is-playlist' : ''}`;
             article.tabIndex = 0;
+
+            const watchUrl = isPlaylist ? `/playlist/${video.id}` : `/watch?v=${video.id}`;
+
             article.innerHTML = `
-                <a href="/watch?v=${video.id}" class="yt-video-card-link" aria-label="${video.title}">
+                <a href="${watchUrl}" class="yt-video-card-link" aria-label="${video.title}">
                     <div class="yt-thumbnail-wrapper">
                         <img src="${video.thumbnail}" alt="${video.title}" class="yt-thumbnail" loading="lazy">
-                        ${video.duration ? `<span class="yt-duration">${video.duration}</span>` : ''}
+                        ${isPlaylist
+                    ? `<div class="yt-pl-overlay">
+                                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                                    <path d="M22 7H2v2h20V7zm-2 4H2v2h18v-2zm-6 4H2v2h12v-2z"/>
+                                </svg>
+                                <span>${video.video_count || 0}</span>
+                               </div>`
+                    : (video.duration ? `<span class="yt-duration">${video.duration}</span>` : '')
+                }
                     </div>
                     <div class="yt-video-card-info">
                         <div class="yt-channel-icon-small">
@@ -170,8 +182,11 @@ endblock %}
                         </div>
                         <div class="yt-video-card-text">
                             <h3 class="yt-video-card-title" title="${video.title}">${video.title}</h3>
-                            <p class="yt-video-card-channel">${video.channel}</p>
-                            <p class="yt-video-card-meta">${video.view_count}</p>
+                            <p class="yt-video-card-channel">
+                                ${video.channel}
+                                ${isPlaylist ? '<span class="yt-pl-badge">Playlist</span>' : ''}
+                            </p>
+                            <p class="yt-video-card-meta">${isPlaylist ? `${video.video_count} videos` : video.view_count}</p>
                         </div>
                     </div>
                 </a>

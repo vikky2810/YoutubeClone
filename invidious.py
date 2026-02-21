@@ -243,6 +243,7 @@ def _piped_video_info(video_id):
 def _inv_video(entry):
     vid_id = entry.get("videoId", "")
     return {
+        "type":        "video",
         "id":          vid_id,
         "title":       entry.get("title", "Untitled"),
         "channel":     entry.get("author", "Unknown"),
@@ -251,6 +252,23 @@ def _inv_video(entry):
         "duration":    fmt_dur(entry.get("lengthSeconds", 0)),
         "view_count":  _fmt_views(entry.get("viewCount", 0)),
         "upload_date": "",
+    }
+
+
+def _inv_playlist_search_result(entry):
+    """Format Invidious playlist search result."""
+    pl_id = entry.get("playlistId", "")
+    return {
+        "type":        "playlist",
+        "id":          pl_id,
+        "title":       entry.get("title", "Untitled Playlist"),
+        "channel":     entry.get("author", "Unknown"),
+        "channel_id":  entry.get("authorId", ""),
+        "thumbnail":   _thumb(entry.get("videos", [{}])[0].get("videoId", "")) if entry.get("videos") else "",
+        "video_count": entry.get("videoCount", 0),
+        "view_count":  "Playlist",
+        "upload_date": "Playlist",
+        "videos":      [{"title": v.get("title", "")} for v in entry.get("videos", [])[:2]]
     }
 
 
@@ -282,12 +300,20 @@ def _inv_trending(max_results=12):
 
 
 def _inv_search(query, max_results=10):
+    # Search for all types to include playlists
     _, data = _try_instances(INVIDIOUS_INSTANCES, "/api/v1/search",
-                             {"q": query, "type": "video"}, "_inv_instance")
+                             {"q": query}, "_inv_instance")
     if not data or not isinstance(data, list):
         return None
-    videos = [_inv_video(v) for v in data[:max_results] if v.get("videoId")]
-    return videos or None
+    
+    results = []
+    for item in data[:max_results]:
+        if item.get("type") == "video":
+            results.append(_inv_video(item))
+        elif item.get("type") == "playlist":
+            results.append(_inv_playlist_search_result(item))
+            
+    return results or None
 
 
 def _inv_video_info(video_id):
@@ -379,3 +405,43 @@ def get_channel(channel_id, max_results=12):
     videos_raw = data.get("latestVideos") or []
     videos = [_inv_video(v) for v in videos_raw[:max_results] if v.get("videoId")]
     return videos, channel_info
+
+
+def get_playlist(playlist_id, max_results=50):
+    """Fetch playlist videos and metadata via Invidious API."""
+    _, data = _try_instances(INVIDIOUS_INSTANCES, f"/api/v1/playlists/{playlist_id}",
+                             cache_attr="_inv_instance")
+    if not data:
+        return None, {}
+
+    playlist_info = {
+        "id":          playlist_id,
+        "title":       data.get("title", "Untitled Playlist"),
+        "description": data.get("description", ""),
+        "channel":     data.get("author", "Unknown"),
+        "channel_id":  data.get("authorId", ""),
+        "thumbnail":   (data.get("videos") or [{}])[0].get("videoThumbnails", [{}])[0].get("url", ""),
+        "video_count": data.get("videoCount", 0),
+    }
+
+    videos_raw = data.get("videos") or []
+    videos = []
+    for v in videos_raw[:max_results]:
+        vid_id = v.get("videoId", "")
+        if not vid_id:
+            continue
+        # Use best available thumbnail
+        thumbs = v.get("videoThumbnails") or []
+        thumb = next((t["url"] for t in thumbs if t.get("quality") in ("high", "medium", "default")), _thumb(vid_id))
+        videos.append({
+            "id":          vid_id,
+            "title":       v.get("title", "Untitled"),
+            "channel":     v.get("author", playlist_info["channel"]),
+            "channel_id":  v.get("authorId", playlist_info["channel_id"]),
+            "thumbnail":   thumb,
+            "duration":    fmt_dur(v.get("lengthSeconds", 0)),
+            "view_count":  _fmt_views(v.get("viewCount", 0)),
+            "upload_date": "",
+        })
+
+    return videos, playlist_info

@@ -122,9 +122,23 @@ MOCK_VIDEOS = [
 # ──────────────────────────────────────────────
 
 def get_mock_trending():
-    """Return shuffled mock videos for the home page."""
+    """Return a shuffled list of all mock videos for the home page."""
     import random
-    pool = MOCK_VIDEOS.copy()
+    pool = list(MOCK_VIDEOS)
+    
+    # Add a mock playlist to the trending pool for demonstration
+    pool.append({
+        'type':        'playlist',
+        'id':          'PL0vfts4Vrd_m6NfP8MAtYtFq8X3K2Xn-P',
+        'title':       'Modern Web Development 2026 - Masterclass',
+        'channel':     'ViewTube Academy',
+        'channel_id':  'UCmock_academy',
+        'thumbnail':   'https://i.ytimg.com/vi/rfscVS0vtbw/hqdefault.jpg',
+        'video_count': 25,
+        'view_count':  'Playlist',
+        'upload_date': 'Playlist'
+    })
+    
     random.shuffle(pool)
     return pool
 
@@ -132,8 +146,29 @@ def get_mock_trending():
 def get_mock_search(query):
     """Return mock search results filtered loosely by query."""
     query_lower = query.lower()
-    results = [v for v in MOCK_VIDEOS if query_lower in v['title'].lower()
+    
+    # Base results from videos
+    results = [v for v in MOCK_VIDEOS if query_lower in v['title'].lower() 
                or query_lower in v['channel'].lower()]
+    
+    # Add a mock playlist result that matches the user's image if searching for ".net" or similar
+    if "net" in query_lower or "course" in query_lower or query_lower == "playlist":
+        results.insert(0, {
+            'type':        'playlist',
+            'id':          'PL0vfts4Vrd_m6NfP8MAtYtFq8X3K2Xn-P',
+            'title':       '.NET full course 2023 | how to learn .NET in 2023 ? #aspdotnetcore',
+            'channel':     'Shiva Gautam',
+            'channel_id':  'UCs667lS99mD9qK-YJ6S7y2',
+            'thumbnail':   'https://i.ytimg.com/vi/rfscVS0vtbw/hqdefault.jpg',
+            'video_count': 42,
+            'view_count':  'Playlist',
+            'upload_date': 'Playlist',
+            'videos': [
+                {'title': '.NET full course 2023 | how to learn .NET in 2023 ? | .NET INTRODUCTION | lect 1 #aspdotnet...'},
+                {'title': '.NET full course 2023 | how to learn .NET ? | C# Program Architecture | lecture 2 #aspdotnet...'}
+            ]
+        })
+    
     # If no match, return all (better than empty)
     return results if results else MOCK_VIDEOS[:6]
 
@@ -196,3 +231,17 @@ def get_mock_channel(channel_id):
     }
     videos = random.sample(MOCK_VIDEOS, k=min(8, len(MOCK_VIDEOS)))
     return videos, channel_info
+
+
+def get_mock_playlist(playlist_id):
+    """Return mock playlist info and a list of videos."""
+    playlist_info = {
+        'id':          playlist_id,
+        'title':       'Web Development Crash Courses',
+        'description': '⚠️  LOCAL MOCK MODE — Running without internet access.\n\nThis playlist contains a curated selection of web development tutorials.',
+        'channel':     'Demo Channel',
+        'channel_id':  'UCmock123',
+        'thumbnail':   MOCK_VIDEOS[0]['thumbnail'],
+        'video_count': len(MOCK_VIDEOS),
+    }
+    return MOCK_VIDEOS[:], playlist_info
