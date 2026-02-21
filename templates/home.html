@@ -7,7 +7,12 @@ endblock %}
 {% block main_content %}
 <!-- Category Chips -->
 <div class="yt-chips-bar" id="chips-bar">
-    <div class="yt-chips-wrapper">
+    <button class="yt-chips-scroll-left" id="chips-scroll-left" aria-label="Scroll left" style="display:none;">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+            <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+        </svg>
+    </button>
+    <div class="yt-chips-wrapper" id="chips-wrapper">
         <button class="yt-chip active" data-filter="all">All</button>
         <button class="yt-chip" data-filter="music">Music</button>
         <button class="yt-chip" data-filter="gaming">Gaming</button>
@@ -23,7 +28,7 @@ endblock %}
         <button class="yt-chip" data-filter="science">Science</button>
         <button class="yt-chip" data-filter="fashion">Fashion</button>
     </div>
-    <button class="yt-chips-scroll-right" aria-label="Scroll right">
+    <button class="yt-chips-scroll-right" id="chips-scroll-right" aria-label="Scroll right">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
             <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
         </svg>
@@ -66,6 +71,35 @@ endblock %}
 </div>
 
 <style>
+    .yt-chips-scroll-right,
+    .yt-chips-scroll-left {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: var(--yt-bg-chip, #272727);
+        border: none;
+        color: var(--yt-text-primary, #f1f1f1);
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .yt-chips-scroll-right {
+        box-shadow: -8px 0 12px 6px var(--yt-bg-main, #0f0f0f);
+    }
+
+    .yt-chips-scroll-left {
+        box-shadow: 8px 0 12px 6px var(--yt-bg-main, #0f0f0f);
+    }
+
+    .yt-chips-scroll-right:hover,
+    .yt-chips-scroll-left:hover {
+        background: #3f3f3f;
+    }
+
     .yt-loading-container {
         display: flex;
         flex-direction: column;
@@ -240,13 +274,31 @@ endblock %}
             });
         });
 
-        // ─── Chips scroll button ───────────────────────────────────────
-        const scrollBtn = document.querySelector('.yt-chips-scroll-right');
-        const chipsWrapper = document.querySelector('.yt-chips-wrapper');
-        if (scrollBtn && chipsWrapper) {
-            scrollBtn.addEventListener('click', () => {
+        // ─── Chips scroll buttons ──────────────────────────────────────
+        const scrollRight = document.getElementById('chips-scroll-right');
+        const scrollLeft = document.getElementById('chips-scroll-left');
+        const chipsWrapper = document.getElementById('chips-wrapper');
+
+        function updateScrollBtns() {
+            if (!chipsWrapper) return;
+            const { scrollLeft: sl, scrollWidth, clientWidth } = chipsWrapper;
+            scrollLeft && (scrollLeft.style.display = sl > 0 ? 'flex' : 'none');
+            scrollRight && (scrollRight.style.display = sl + clientWidth < scrollWidth - 1 ? 'flex' : 'none');
+        }
+
+        if (scrollRight && chipsWrapper) {
+            scrollRight.addEventListener('click', () => {
                 chipsWrapper.scrollBy({ left: 200, behavior: 'smooth' });
             });
+        }
+        if (scrollLeft && chipsWrapper) {
+            scrollLeft.addEventListener('click', () => {
+                chipsWrapper.scrollBy({ left: -200, behavior: 'smooth' });
+            });
+        }
+        if (chipsWrapper) {
+            chipsWrapper.addEventListener('scroll', updateScrollBtns);
+            updateScrollBtns(); // run once on load
         }
 
         // ─── Initial load ──────────────────────────────────────────────
