@@ -33,6 +33,31 @@ body {
     overflow-x: hidden;
 }
 
+/* Custom Scrollbar Styles */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* For Firefox */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
 /* Header Styles */
 .yt-header {
     height: var(--yt-header-height);
@@ -191,6 +216,14 @@ body {
     overflow-y: auto;
     transition: transform 0.2s, width 0.2s;
     z-index: 900;
+}
+
+.yt-sidebar::-webkit-scrollbar-thumb {
+    background: transparent;
+}
+
+.yt-sidebar:hover::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
 }
 
 .yt-sidebar.collapsed {
