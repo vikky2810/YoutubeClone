@@ -111,7 +111,8 @@ body {
     background: var(--yt-bg-search);
     border: 1px solid var(--yt-search-border);
     border-radius: 40px;
-    overflow: hidden;
+    /* overflow: visible to allow autocomplete dropdown */
+    overflow: visible;
     position: relative;
     margin-left: 32px;
 }
@@ -139,6 +140,7 @@ body {
     width: 64px;
     color: var(--yt-text-primary);
     cursor: pointer;
+    border-radius: 0 40px 40px 0;
 }
 
 .yt-search-btn:hover {
@@ -731,6 +733,55 @@ body {
 
     .yt-header-center {
         display: none;
+    }
+
+    /* Mobile Search Bar overlay */
+    .mobile-search-bar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: var(--yt-header-height);
+        background: var(--yt-bg-header);
+        z-index: 1500;
+        display: none;
+        align-items: center;
+        padding: 0 8px;
+    }
+
+    .mobile-search-bar.active {
+        display: flex;
+    }
+
+    .mobile-search-form {
+        display: flex;
+        flex: 1;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .mobile-search-input {
+        flex: 1;
+        background: #181818;
+        border: 1px solid #333;
+        border-radius: 20px;
+        padding: 0 16px;
+        height: 40px;
+        color: white;
+        font-size: 16px;
+        outline: none;
+    }
+
+    .mobile-search-submit, .mobile-search-close {
+        background: transparent;
+        border: none;
+        color: white;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
     }
 }
 

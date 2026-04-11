@@ -29,15 +29,19 @@ class SearchAutocomplete {
         this.dropdown.className = 'yt-autocomplete-dropdown';
         this.dropdown.style.cssText = `
             position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
             background: #212121;
-            width: 100%;
-            border-radius: 0 0 12px 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-            z-index: 2000;
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+            z-index: 2100;
             display: none;
-            overflow: hidden;
+            overflow-y: auto;
+            overflow-x: hidden;
+            max-height: 480px;
             border: 1px solid #333;
-            border-top: none;
+            padding: 8px 0;
         `;
 
         const container = this.input.closest('.yt-search-box, .yt-hero-search-box');
@@ -83,15 +87,28 @@ class SearchAutocomplete {
         suggestions.forEach((suggestion, index) => {
             const item = document.createElement('div');
             item.className = 'yt-autocomplete-item';
-            item.textContent = suggestion;
             item.style.cssText = `
-                padding: 8px 16px;
+                padding: 10px 16px;
                 cursor: pointer;
                 color: #f1f1f1;
-                font-size: 14px;
+                font-size: 15px;
                 display: flex;
                 align-items: center;
-                gap: 12px;
+                gap: 14px;
+                transition: background 0.1s;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                line-height: normal;
+                width: 100%;
+                box-sizing: border-box;
+            `;
+
+            item.innerHTML = `
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="#aaa" style="flex-shrink: 0;">
+                    <path d="M20.87 20.17l-5.59-5.59C16.35 13.35 17 11.75 17 10c0-3.87-3.13-7-7-7s-7 3.13-7 7 3.13 7 7 7c1.75 0 3.35-.65 4.58-1.71l5.59 5.59.7-.71zM10 16c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z" />
+                </svg>
+                <span style="overflow: hidden; text-overflow: ellipsis;">${suggestion}</span>
             `;
 
             item.addEventListener('click', () => {
@@ -165,7 +182,7 @@ class SearchAutocomplete {
 
 document.addEventListener('DOMContentLoaded', () => {
     // Standard YouTube inputs
-    const inputs = document.querySelectorAll('.yt-search-input, .yt-hero-search-input');
+    const inputs = document.querySelectorAll('.yt-search-input, .yt-hero-search-input, .mobile-search-input');
     inputs.forEach(input => {
         const form = input.closest('form');
         if (form) new SearchAutocomplete(input, form);

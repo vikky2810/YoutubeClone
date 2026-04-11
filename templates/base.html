@@ -310,6 +310,25 @@
             });
         }
 
+        // Mobile Search Toggle
+        const mobileSearchBar = document.getElementById('mobile-search-bar');
+        const mobileSearchToggle = document.getElementById('mobile-search-toggle');
+        const mobileSearchClose = document.getElementById('mobile-search-close');
+        const mobileSearchInput = document.getElementById('mobile-search-input');
+
+        if (mobileSearchToggle && mobileSearchBar) {
+            mobileSearchToggle.addEventListener('click', () => {
+                mobileSearchBar.classList.add('active');
+                mobileSearchInput && mobileSearchInput.focus();
+            });
+        }
+
+        if (mobileSearchClose && mobileSearchBar) {
+            mobileSearchClose.addEventListener('click', () => {
+                mobileSearchBar.classList.remove('active');
+            });
+        }
+
         // Global error handling helper
         window.showError = function (message) {
             const container = document.getElementById('flash-messages');
